@@ -1,0 +1,107 @@
+scalar DateTime
+scalar Coordinates
+
+type Query {
+  constellations: [Constellation!]!
+  viewingLocations: [ViewingLocation!]!
+  visibleNow(locationId: ID!): [CelestialObject!]!
+  observations(locationId: ID!): [Observation!]!
+}
+
+type Mutation {
+  logObservation(input: LogObservationInput!): Observation!
+}
+
+type Subscription {
+  visibleSky(locationId: ID!): [CelestialObject!]!
+}
+
+type Constellation {
+  id: ID!
+  name: String!
+  abbreviation: String!
+  family: ConstellationFamily!
+  mythology: String!
+  members: [CelestialObject!]!
+}
+
+enum ConstellationFamily {
+  ZODIACAL
+  CIRCUMPOLAR
+  SEASONAL
+}
+
+interface CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+}
+
+type Star implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  spectralType: String!
+}
+
+type Nebula implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  nebulaType: NebulaType!
+}
+
+enum NebulaType {
+  EMISSION
+  REFLECTION
+  PLANETARY
+  SUPERNOVA_REMNANT
+}
+
+type Galaxy implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  galaxyType: GalaxyType!
+  distanceLightYears: Float!
+}
+
+enum GalaxyType {
+  SPIRAL
+  ELLIPTICAL
+  IRREGULAR
+}
+
+type ViewingLocation {
+  id: ID!
+  name: String!
+  coordinates: Coordinates!
+  elevationMeters: Float!
+}
+
+type Observation {
+  id: ID!
+  subject: CelestialObject!
+  location: ViewingLocation!
+  observedAt: DateTime!
+  conditions: ViewingConditions!
+  notes: String
+}
+
+enum ViewingConditions {
+  POOR
+  FAIR
+  GOOD
+  EXCELLENT
+}
+
+input LogObservationInput {
+  objectId: ID!
+  locationId: ID!
+  conditions: ViewingConditions!
+  notes: String
+}

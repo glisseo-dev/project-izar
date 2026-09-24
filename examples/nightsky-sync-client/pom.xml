@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Deliberately NOT a child of izar-parent (see ../README.md): this project resolves Izar
+       the way a real consumer does, as installed artifacts, with its own ordinary Spring Boot
+       parent. Run `./mvnw install` at the repo root first so those artifacts exist locally. -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>dev.glisseo.izar.examples</groupId>
+  <artifactId>nightsky-sync-client</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+
+  <name>Izar example :: Nightsky sync client</name>
+  <description>Issue 20: a runnable console client that browses the Nightsky catalog, checks
+    what's visible right now, and logs an observation, through Izar's synchronous
+    SynchronousGraphQlOperations adapter.</description>
+
+  <properties>
+    <java.version>25</java.version>
+    <izar.version>0.1.0-SNAPSHOT</izar.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-client</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-operation</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+    <!-- Supplies the DateTime scalar codec the generated client's custom scalar mapping
+         (configured on izar-maven-plugin below) instantiates. The Coordinates scalar has no
+         shipped codec, so this module supplies its own (GeoCoordinatesScalarCodec). -->
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-scalars</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webflux</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-maven-plugin</artifactId>
+        <version>${izar.version}</version>
+        <executions>
+          <execution>
+            <id>generate-izar-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-izar-manifest</id>
+            <phase>package</phase>
+            <configuration>
+              <classifier>nightsky-sync-manifest</classifier>
+            </configuration>
+            <goals>
+              <goal>attach</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- schema and operationDirectory keep the plugin's defaults: src/main/graphql. -->
+          <basePackage>dev.glisseo.izar.examples.nightsky.generated</basePackage>
+          <scalarMappings>
+            <scalarMapping>
+              <graphqlScalarName>DateTime</graphqlScalarName>
+              <javaTypeName>java.time.Instant</javaTypeName>
+              <codecClassName>dev.glisseo.izar.scalars.InstantScalarCodec</codecClassName>
+            </scalarMapping>
+            <scalarMapping>
+              <graphqlScalarName>Coordinates</graphqlScalarName>
+              <javaTypeName>dev.glisseo.izar.examples.nightsky.GeoCoordinates</javaTypeName>
+              <codecClassName>dev.glisseo.izar.examples.nightsky.GeoCoordinatesScalarCodec</codecClassName>
+            </scalarMapping>
+          </scalarMappings>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,6 @@
+subscription WatchBook {
+  bookChanged {
+    title
+    pageCount
+  }
+}

@@ -1,0 +1,16 @@
+mutation LogObservation($input: LogObservationInput!) {
+  logObservation(input: $input) {
+    id
+    observedAt
+    conditions
+    notes
+    subject {
+      id
+      name
+    }
+    location {
+      id
+      name
+    }
+  }
+}

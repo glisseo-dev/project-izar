@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.glisseo.izar</groupId>
+    <artifactId>izar-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>izar-manifest</artifactId>
+  <name>Izar :: Manifest</name>
+  <description>Reading, writing, merging, and validating Apollo-compatible persisted-query
+    manifests, plus the ManifestSource seam that supplies versioned snapshots independently
+    of transport. Also release-scoped schema usage, change-impact, and candidate-schema-check
+    analysis, reused unchanged by both the controller and the CLI. Shared by the compiler, the
+    client, the server, and the controller.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-operation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!-- Candidate schema checks and release-scoped usage analysis validate operation documents and
+         diff schemas with GraphQL Java's own parser, validator, and schema-diffing engine, never a
+         hand-rolled equivalent. Version is inherited from the Spring Boot BOM, same as
+         izar-compiler's and izar-controller's direct dependency. -->
+    <dependency>
+      <groupId>com.graphql-java</groupId>
+      <artifactId>graphql-java</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.glisseo.izar</groupId>
+    <artifactId>izar-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>izar-maven-plugin</artifactId>
+  <packaging>maven-plugin</packaging>
+  <name>Izar :: Maven plugin</name>
+  <description>The Maven lifecycle adapter over izar-compiler. Holds only lifecycle and
+    parameter binding, so compiler behavior stays reusable by another build integration.</description>
+
+  <prerequisites>
+    <maven>${maven.version}</maven>
+  </prerequisites>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-compiler</artifactId>
+    </dependency>
+    <!-- Declared directly, not just pulled in transitively through izar-compiler: this Mojo
+         serializes the returned OperationManifest itself. -->
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-manifest</artifactId>
+    </dependency>
+
+    <!-- Build-plugin dependencies stay isolated from the application runtime classpath. -->
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>${maven-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>${maven-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Only transitive through maven-core above, but PublishMojo and PublishCredentials use
+         these classes directly to decrypt settings.xml server credentials. -->
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-settings</artifactId>
+      <version>${maven-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-settings-builder</artifactId>
+      <version>${maven-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugin-tools</groupId>
+      <artifactId>maven-plugin-annotations</artifactId>
+      <version>${maven-plugin-annotations.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Only the resolver API: DeployMojo and AssembleMojo describe requests against the
+         org.eclipse.aether types, but never construct a RepositorySystem or
+         RepositorySystemSession themselves. A real Maven run injects both, already wired to
+         settings.xml repositories, mirrors, and credentials; this plugin adds no repository
+         SDK dependency of its own beyond these interfaces. -->
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-api</artifactId>
+      <version>${maven-resolver.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Test-only: outside a real Maven build, tests must assemble their own RepositorySystem
+         to exercise DeployMojo and AssembleMojo against a real repository. None of these reach
+         the main classpath. -->
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-resolver-provider</artifactId>
+      <version>${maven-plugin-api.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-impl</artifactId>
+      <version>${maven-resolver.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-connector-basic</artifactId>
+      <version>${maven-resolver.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-transport-file</artifactId>
+      <version>${maven-resolver.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-transport-http</artifactId>
+      <version>${maven-resolver.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>help-goal</id>
+            <goals>
+              <goal>helpmojo</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- ManifestArtifactExchangeIT drives DeployMojo and AssembleMojo against real, local
+           file:// and loopback HTTP repositories; no network access or external account is
+           needed, so this runs unconditionally rather than behind a profile. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

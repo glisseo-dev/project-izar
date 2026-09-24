@@ -1,0 +1,9 @@
+query GetBooksWithFragmentAliasAndConditional($includeAuthor: Boolean!) {
+  allBooks: books {
+    ...BookCoreFields
+    pageCount
+    author @include(if: $includeAuthor) {
+      name
+    }
+  }
+}

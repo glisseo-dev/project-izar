@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: nightsky-reactive-client
+  main:
+    banner-mode: "off"
+
+nightsky:
+  server-url: http://localhost:8083/graphql

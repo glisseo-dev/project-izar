@@ -1,0 +1,3 @@
+mutation Categorize($input: CategoryInput!) {
+  categorize(input: $input)
+}

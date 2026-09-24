@@ -1,0 +1,6 @@
+mutation CreateBook($input: BookInput!) {
+  createBook(input: $input) {
+    title
+    pageCount
+  }
+}

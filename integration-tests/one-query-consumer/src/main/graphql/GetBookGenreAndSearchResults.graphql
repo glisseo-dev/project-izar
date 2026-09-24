@@ -1,0 +1,15 @@
+query GetBookGenreAndSearchResults {
+  book {
+    title
+    genre
+  }
+  search {
+    ... on Book {
+      title
+    }
+    ... on Movie {
+      title
+      director
+    }
+  }
+}

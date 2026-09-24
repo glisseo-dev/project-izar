@@ -1,0 +1,10 @@
+query GetPartialBook {
+  partialBook {
+    title
+    pageCount
+    author {
+      name
+    }
+    tags
+  }
+}

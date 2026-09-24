@@ -1,0 +1,8 @@
+query GetViewingLocations {
+  viewingLocations {
+    id
+    name
+    coordinates
+    elevationMeters
+  }
+}

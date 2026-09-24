@@ -1,0 +1,3 @@
+mutation LinkNodes($a: NodeAInput!, $b: NodeBInput!) {
+  linkNodes(a: $a, b: $b)
+}

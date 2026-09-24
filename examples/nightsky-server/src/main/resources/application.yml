@@ -1,0 +1,23 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: nightsky-server
+  graphql:
+    graphiql:
+      enabled: true
+
+izar:
+  graphql:
+    server:
+      # Relative to this module's own directory (spring-boot:run's working directory), not the
+      # repo root; see README for how this file is produced and regenerated.
+      #      manifest-file: izar/manifest.json
+      mode: enforce
+      status-report-url: http://localhost:8080/api/server-status
+      identity: nightsky-one
+      manifest-url: http://localhost:8080/api/snapshots/latest
+      status-report-password: xoxo
+      status-report-username: xoxo
+

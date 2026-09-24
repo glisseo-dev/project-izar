@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Deliberately NOT a child of izar-parent (see ../README.md), and unlike the two Nightsky
+       clients, not a Spring Boot application either: this is a Maven-only deployment build with no
+       Java sources at all. Its only job is to resolve the two clients' published manifest
+       artifacts and assemble them into one deployable release. Run `./mvnw install` at the repo
+       root, then `nightsky-sync-client` and `nightsky-reactive-client`'s own `install`, before
+       building this project. -->
+  <groupId>dev.glisseo.izar.examples</groupId>
+  <artifactId>nightsky-release-assembly</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Izar example :: Nightsky release assembly</name>
+  <description>A deployment build that resolves nightsky-sync-client's and
+    nightsky-reactive-client's published manifest artifacts by Maven coordinate and assembles them,
+    with izar-maven-plugin's assemble goal, into one pinned union manifest, then attaches that
+    union manifest as this project's own deployable artifact.</description>
+
+  <properties>
+    <izar.version>0.1.0-SNAPSHOT</izar.version>
+    <maven.compiler.release>25</maven.compiler.release>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-maven-plugin</artifactId>
+        <version>${izar.version}</version>
+        <executions>
+          <execution>
+            <id>assemble-nightsky-releases</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+            <configuration>
+              <graph>nightsky</graph>
+              <environment>production</environment>
+              <releases>
+                <release>
+                  <!-- nightsky-sync-client currently attaches under the plugin's default
+                       izar-manifest classifier; see its own pom.xml. -->
+                  <clientName>nightsky-sync-client</clientName>
+                  <manifestVersion>0.1.0-SNAPSHOT</manifestVersion>
+                  <groupId>dev.glisseo.izar.examples</groupId>
+                  <artifactId>nightsky-sync-client</artifactId>
+                  <version>0.1.0-SNAPSHOT</version>
+                </release>
+                <release>
+                  <clientName>nightsky-reactive-client</clientName>
+                  <manifestVersion>0.1.0-SNAPSHOT</manifestVersion>
+                  <groupId>dev.glisseo.izar.examples</groupId>
+                  <artifactId>nightsky-reactive-client</artifactId>
+                  <version>0.1.0-SNAPSHOT</version>
+                  <classifier>nightsky-reactive-manifest</classifier>
+                </release>
+              </releases>
+            </configuration>
+          </execution>
+          <execution>
+            <id>attach-nightsky-ubermanifest</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach</goal>
+            </goals>
+            <configuration>
+              <!-- assemble's output, not generate's: this project generates nothing of its own. -->
+              <manifestFile>${project.build.directory}/izar/assembled/manifest.json</manifestFile>
+              <classifier>nightsky-uber-manifest</classifier>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Deliberately NOT a child of izar-parent (see ../README.md): this project resolves Izar
+       the way a real consumer does, as installed artifacts, with its own ordinary Spring Boot
+       parent. Run `./mvnw install` at the repo root first so those artifacts exist locally. -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>dev.glisseo.izar.examples</groupId>
+  <artifactId>one-query-consumer</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+
+  <name>Izar example :: One query consumer</name>
+  <description>Issue 01: a Maven consumer that generates, compiles, and executes one GraphQL
+    query through a synchronous Spring GraphQL client, mapping the result with MapStruct.</description>
+
+  <properties>
+    <java.version>25</java.version>
+    <izar.version>0.1.0-SNAPSHOT</izar.version>
+    <!-- MapStruct is not managed by the Boot BOM, and this project is not a child of
+         izar-parent, so it is pinned here for this fixture only. -->
+    <mapstruct.version>1.6.3</mapstruct.version>
+    <!-- Spring Retry is likewise not managed by the Boot BOM. Issue 08's application-controlled
+         resilience example uses it directly, as ordinary Spring Retry usage would in any
+         consumer, rather than an Izar-specific retry mechanism. -->
+    <spring-retry.version>2.0.13</spring-retry.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-client</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-operation</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-manifest</artifactId>
+      <version>${izar.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Supplies the DateTime scalar codec the generated client's custom scalar mapping
+         (configured on izar-maven-plugin below) instantiates. -->
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-scalars</artifactId>
+      <version>${izar.version}</version>
+    </dependency>
+    <!-- Issue 135: the persisted-subscription integration test runs the real Izar server
+         allowlist and persisted-document resolver in the consumer application. -->
+    <dependency>
+      <groupId>dev.glisseo.izar</groupId>
+      <artifactId>izar-server</artifactId>
+      <version>${izar.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct</artifactId>
+      <version>${mapstruct.version}</version>
+    </dependency>
+
+    <!-- Issue 08: application-controlled resilience through ordinary Spring Retry, not an
+         Izar-specific retry mechanism. -->
+    <dependency>
+      <groupId>org.springframework.retry</groupId>
+      <artifactId>spring-retry</artifactId>
+      <version>${spring-retry.version}</version>
+    </dependency>
+
+    <!-- Test-only: the fixture GraphQL server this example's client talks to in its test. A
+         real consumer's server lives elsewhere; here the "elsewhere" is the test fixture.
+         spring-boot-starter-web supplies the embedded servlet container the fixture's HTTP
+         GraphQL endpoint needs; nothing in main code requires it. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-graphql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Test-only: issue 134's transport fixtures expose the same GraphQL subscription over
+         Spring's WebSocket and RSocket server adapters. The application still owns these
+         transport dependencies; izar-client only consumes the resulting GraphQlClient. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-rsocket</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Test-only: issue 07's reactive adapter test builds an HttpGraphQlClient, which needs
+         WebClient. No reactor-netty dependency is added alongside it, so WebClient falls back
+         to spring-web's JdkClientHttpConnector; the fixture server stays a servlet application
+         because spring-boot-starter-web is already present. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webflux</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Reactor Netty supplies the WebSocket client used by Spring GraphQL's application-owned
+         WebSocketGraphQlClient builder. -->
+    <dependency>
+      <groupId>io.projectreactor.netty</groupId>
+      <artifactId>reactor-netty-http</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Test-only: the representative GraphQL Java Extended Scalars server fixture issue 06's
+         acceptance criteria ask for. Not managed by the Boot BOM, so pinned here for this
+         fixture only, matching the graphql-java 25.0 line as closely as a published release
+         allows. -->
+    <dependency>
+      <groupId>com.graphql-java</groupId>
+      <artifactId>graphql-java-extended-scalars</artifactId>
+      <version>24.0</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-maven-plugin</artifactId>
+        <version>${izar.version}</version>
+        <executions>
+          <execution>
+            <id>generate-books-server</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <!-- This server retains the default schema and operation directory. -->
+              <basePackage>dev.glisseo.izar.generated.books</basePackage>
+              <outputDirectory>${project.build.directory}/generated-sources/izar</outputDirectory>
+              <manifestFile>${project.build.directory}/izar/books-server/manifest.json</manifestFile>
+              <scalarMappings>
+                <scalarMapping>
+                  <graphqlScalarName>DateTime</graphqlScalarName>
+                  <javaTypeName>java.time.Instant</javaTypeName>
+                  <codecClassName>dev.glisseo.izar.scalars.InstantScalarCodec</codecClassName>
+                </scalarMapping>
+                <scalarMapping>
+                  <graphqlScalarName>Date</graphqlScalarName>
+                  <javaTypeName>java.time.LocalDate</javaTypeName>
+                  <codecClassName>dev.glisseo.izar.scalars.LocalDateScalarCodec</codecClassName>
+                </scalarMapping>
+                <scalarMapping>
+                  <graphqlScalarName>BigDecimal</graphqlScalarName>
+                  <javaTypeName>java.math.BigDecimal</javaTypeName>
+                  <codecClassName>dev.glisseo.izar.scalars.BigDecimalScalarCodec</codecClassName>
+                </scalarMapping>
+              </scalarMappings>
+            </configuration>
+          </execution>
+          <execution>
+            <id>generate-status-server</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <schema>${project.basedir}/src/main/graphql-status/schema.graphqls</schema>
+              <operationDirectory>${project.basedir}/src/main/graphql-status</operationDirectory>
+              <basePackage>dev.glisseo.izar.generated.status</basePackage>
+              <outputDirectory>${project.build.directory}/generated-sources/izar</outputDirectory>
+              <manifestFile>${project.build.directory}/izar/status-server/manifest.json</manifestFile>
+            </configuration>
+          </execution>
+          <execution>
+            <id>attach-status-server-manifest</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach</goal>
+            </goals>
+            <configuration>
+              <manifestFile>${project.build.directory}/izar/status-server/manifest.json</manifestFile>
+              <classifier>izar-status-server-manifest</classifier>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.mapstruct</groupId>
+              <artifactId>mapstruct-processor</artifactId>
+              <version>${mapstruct.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

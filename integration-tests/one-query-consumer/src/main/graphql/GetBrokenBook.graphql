@@ -1,0 +1,5 @@
+query GetBrokenBook {
+  brokenBook {
+    title
+  }
+}

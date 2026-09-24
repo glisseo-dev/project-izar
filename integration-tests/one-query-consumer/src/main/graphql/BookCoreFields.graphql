@@ -1,0 +1,4 @@
+fragment BookCoreFields on Book {
+  title
+  tags
+}

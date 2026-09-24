@@ -1,0 +1,20 @@
+subscription WatchVisibleSky($locationId: ID!) {
+  visibleSky(locationId: $locationId) {
+    id
+    name
+    magnitude
+    constellation {
+      name
+    }
+    ... on Star {
+      spectralType
+    }
+    ... on Nebula {
+      nebulaType
+    }
+    ... on Galaxy {
+      galaxyType
+      distanceLightYears
+    }
+  }
+}

@@ -1,0 +1,52 @@
+type Query {
+  book: Book
+  books: [Book!]!
+  partialBook: Book
+  brokenBook: Book!
+  search: [SearchResult!]!
+}
+
+type Mutation {
+  createBook(input: BookInput!): Book
+}
+
+type Book {
+  title: String!
+  pageCount: Int
+  author: Author
+  tags: [String]
+  genre: Genre!
+}
+
+type Author {
+  name: String!
+}
+
+union SearchResult = Book | Movie | TVShow
+
+type Movie {
+  title: String!
+  director: String!
+}
+
+type TVShow {
+  title: String!
+}
+
+enum Genre {
+  FICTION
+  NONFICTION
+  MYSTERY
+}
+
+input BookInput {
+  title: String!
+  pageCount: Int
+  genre: Genre = FICTION
+  tags: [String]
+  coAuthors: [AuthorInput!]
+}
+
+input AuthorInput {
+  name: String!
+}
