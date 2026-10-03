@@ -7,7 +7,7 @@ import dev.glisseo.izar.manifest.source.ManifestSource;
  * supplies its manifest.
  *
  * <p>{@code source} is a {@link ManifestSource}, not a file path, so a {@link ReleaseAssembler}
- * stays agnostic to where the release's manifest actually lives. Issue 33's callers resolve local
+ * stays agnostic to where the release's manifest actually lives. Callers resolve local
  * files through {@link LocalManifestSource}; repository resolution is a separate build-tool
  * integration layered on top, never part of local assembly itself.
  */

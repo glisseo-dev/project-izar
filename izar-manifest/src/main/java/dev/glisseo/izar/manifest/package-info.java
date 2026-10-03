@@ -32,9 +32,8 @@
  * schema versions cross-referenced against that usage. Both are shared, unmodified, by the
  * controller's coverage and change-impact reports and by {@link
  * dev.glisseo.izar.manifest.analysis.CandidateChecker}'s pre-deployment check of a candidate
- * schema against an assembled selection, satisfying decision 22 of the phase 2 specification:
- * the CLI and the controller run the same analysis behavior, not two implementations that can
- * drift.
+ * schema against an assembled selection. The CLI and the controller use the same analysis
+ * implementation.
  *
  * <p>{@link dev.glisseo.izar.manifest.bundle.BundleWriter} packages an assembled selection into a
  * self-contained {@link dev.glisseo.izar.manifest.bundle.TransferBundle}: the assembled manifest,

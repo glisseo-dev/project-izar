@@ -198,7 +198,7 @@ class ReactiveGraphQlOperationsTest {
         Mono<GraphQlResult<String>> result = ReactiveGraphQlOperations.fullDocument(client).execute(operation);
 
         StepVerifier.create(result).verifyErrorSatisfies(e -> assertThat(e).isSameAs(transportFailure));
-        // Confirms issue 07's "adds no automatic retry behavior" directly: a stubbed execute()
+        // Confirms that the operation adds no automatic retry behavior: a stubbed execute()
         // observed exactly once past a failure proves nothing in this adapter re-invoked it.
         verify(request, times(1)).execute();
     }
@@ -206,7 +206,7 @@ class ReactiveGraphQlOperationsTest {
     /**
      * Proves this adapter adds no stage (buffering, caching, retry) between the caller's
      * subscription and the transport's own {@code Mono}: cancelling downstream reaches the
-     * transport's cancellation callback, exactly as issue 07's acceptance criteria require.
+     * transport's cancellation callback.
      */
     @Test
     void propagatesCancellationToTheUnderlyingExecution() {

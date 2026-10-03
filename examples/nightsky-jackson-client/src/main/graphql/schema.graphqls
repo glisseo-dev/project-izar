@@ -1,0 +1,45 @@
+scalar DateTime
+scalar Coordinates
+
+type Query {
+  visibleNow(locationId: ID!): [CelestialObject!]!
+}
+
+interface CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+}
+
+type Star implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  spectralType: String!
+}
+
+type Nebula implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  nebulaType: NebulaType!
+}
+
+type Galaxy implements CelestialObject {
+  id: ID!
+  name: String!
+  magnitude: Float!
+  constellation: Constellation!
+  galaxyType: GalaxyType!
+  distanceLightYears: Float!
+}
+
+type Constellation {
+  name: String!
+}
+
+enum NebulaType { EMISSION REFLECTION PLANETARY SUPERNOVA_REMNANT }
+enum GalaxyType { SPIRAL ELLIPTICAL IRREGULAR }

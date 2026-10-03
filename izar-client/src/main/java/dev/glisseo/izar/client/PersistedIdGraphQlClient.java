@@ -13,7 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
  *
  * <p>{@code restClient}/{@code webClient} must already be scoped to the same URL {@link
  * GraphQlExecutionMode#FULL_DOCUMENT} mode uses: a compatible server accepts both shapes on its
- * standard endpoint (see ADR 0010), so persisted-ID execution needs no URL of its own.
+ * standard endpoint, so persisted-ID execution needs no URL of its own.
  *
  * <p>This is the low-level building block behind {@link SynchronousGraphQlOperations#persistedQuery}
  * and {@link ReactiveGraphQlOperations#persistedQuery}, which most callers should use instead: those

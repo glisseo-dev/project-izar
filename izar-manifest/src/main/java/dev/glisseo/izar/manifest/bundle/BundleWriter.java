@@ -22,10 +22,10 @@ import java.util.Map;
  * <p>Holds no assembly logic of its own: {@link ReleaseAssembler} still performs the union, exactly
  * as {@link dev.glisseo.izar.cli.AssembleCommand} already calls it directly. This adds only what
  * assembly does not already keep around: each contributing release's original manifest bytes,
- * embedded so a bundle stays self-contained (decision 13).
+ * embedded so a bundle stays self-contained.
  *
  * <p>Every selected release must resolve through a {@link LocalManifestSource}, the same local-only
- * scope {@link dev.glisseo.izar.cli.AssembleCommand} already has (decision 22): a bundle's embedded
+ * scope {@link dev.glisseo.izar.cli.AssembleCommand} already has: a bundle's embedded
  * originals are the exact bytes on disk, not a re-fetch from wherever a source might otherwise read
  * from.
  */
@@ -42,7 +42,7 @@ public final class BundleWriter {
     public TransferBundle write(ReleaseSelection selection, Path bundleDirectory) {
         // Checked before assembly even runs, so a non-file source fails as a local-only bundling
         // error rather than as whatever assembly's own attempt to load it happens to raise (a
-        // network timeout, for an HTTP source) — and so bundling never makes a network call at all.
+        // network timeout, for an HTTP source), and so bundling never makes a network call at all.
         Map<ClientRelease, Path> sourceFiles = new LinkedHashMap<>();
         for (SelectedRelease selectedRelease : selection.releases()) {
             if (!(selectedRelease.source() instanceof LocalManifestSource fileSource)) {

@@ -15,6 +15,58 @@ import org.junit.jupiter.api.io.TempDir;
 class OperationCompilerTest {
 
     @Test
+    void jacksonGenerationEmitsSpringGraphQlModelsWithoutIzarDecoders(@TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.MEDIA_SCHEMA);
+        Path operation = writeFile(tempDir, "GetFeaturedMedia.graphql", Fixtures.GET_FEATURED_MEDIA_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated.jackson", GenerationMode.JACKSON);
+
+        String source = Files.readString(generatedFile(output, "generated.jackson", "GetFeaturedMediaQuery"));
+        assertThat(source)
+                .contains("implements GraphQlRequest")
+                .contains("@JsonTypeInfo")
+                .contains("@JsonSubTypes")
+                .doesNotContain("implements GraphQlOperation<")
+                .doesNotContain("GraphQlDecoding")
+                .doesNotContain("DecodingPolicy")
+                .doesNotContain(" decode(");
+    }
+
+    @Test
+    void jacksonGenerationUsesStringsForOutputEnums(@TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.BOOK_SCHEMA_WITH_OUTPUT_ENUM);
+        Path operation = writeFile(tempDir, "GetBookGenre.graphql", Fixtures.GET_BOOK_GENRE_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated.jackson", GenerationMode.JACKSON);
+
+        String source = Files.readString(generatedFile(output, "generated.jackson", "GetBookGenreQuery"));
+        assertThat(source)
+                .contains("String genre")
+                .doesNotContain("public sealed interface Genre")
+                .doesNotContain("GraphQlDecoding");
+    }
+
+    @Test
+    void jacksonGenerationKeepsVariableBuildersWithoutGeneratingDecoders(@TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.BOOK_SCHEMA_WITH_MUTATION);
+        Path operation = writeFile(tempDir, "CreateBook.graphql", Fixtures.CREATE_BOOK_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated.jackson", GenerationMode.JACKSON);
+
+        String source = Files.readString(generatedFile(output, "generated.jackson", "CreateBookMutation"));
+        assertThat(source)
+                .contains("implements GraphQlRequest")
+                .contains("import dev.glisseo.izar.operation.GraphQlEncoding;")
+                .contains("public static Builder builder()")
+                .contains("public Map<String, Object> variables()")
+                .doesNotContain("GraphQlDecoding")
+                .doesNotContain("DecodingPolicy");
+    }
+
+    @Test
     void generatesSimpleNestedQuery(@TempDir Path tempDir) throws IOException {
         Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.BOOK_SCHEMA);
         Path operation = writeFile(tempDir, "GetBook.graphql", Fixtures.GET_BOOK_OPERATION);
@@ -55,6 +107,20 @@ class OperationCompilerTest {
                 .contains("bookChanged");
         assertThat(manifest.operations()).singleElement().satisfies(entry ->
                 assertThat(entry.type()).isEqualTo("subscription"));
+    }
+
+    @Test
+    void rejectsTwoOperationFilesThatGenerateTheSameJavaType(@TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.BOOK_SCHEMA);
+        Path first = writeFile(Files.createDirectories(tempDir.resolve("a")), "GetBook.graphql", Fixtures.GET_BOOK_OPERATION);
+        Path second = writeFile(Files.createDirectories(tempDir.resolve("b")), "GetBook.graphql", Fixtures.GET_BOOK_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        assertThatThrownBy(() -> new OperationCompiler()
+                        .generate(List.of(schema), List.of(first, second), output, "generated.book"))
+                .isInstanceOf(OperationGenerationException.class)
+                .hasMessageContaining("'GetBook'")
+                .hasMessageContaining("same Java type");
     }
 
     @Test
@@ -678,6 +744,106 @@ class OperationCompilerTest {
                 .doesNotContain("sealed interface")
                 .doesNotContain("__typename")
                 .contains("public record Featured(\n            String title\n    ) {}");
+    }
+
+    @Test
+    void reusesOneNestedObjectTypeForAPolymorphicFieldsSharedObjectTypedFieldAcrossEveryBranch(
+            @TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.CELESTIAL_OBJECT_SCHEMA);
+        Path operation =
+                writeFile(
+                        tempDir,
+                        "GetFeaturedCelestialObject.graphql",
+                        Fixtures.GET_FEATURED_CELESTIAL_OBJECT_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated");
+
+        String source = Files.readString(generatedFile(output, "generated", "GetFeaturedCelestialObjectQuery"));
+        // 'constellation' is a shared interface field selecting only scalars, identically in every
+        // branch (Star/Nebula/Galaxy) and the Unrecognized fallback: it must resolve to exactly one
+        // 'Constellation' record, reused everywhere, not a fresh 'Constellation2'/'Constellation3'/
+        // 'Constellation4' per branch.
+        assertThat(source)
+                .contains("public record Constellation(\n            String name\n    ) {}")
+                .doesNotContain("Constellation2")
+                .doesNotContain("Constellation3")
+                .doesNotContain("Constellation4")
+                .contains("Constellation constellation")
+                .contains("record FeaturedStar(")
+                .contains("record FeaturedNebula(")
+                .contains("record FeaturedGalaxy(")
+                .contains("record FeaturedUnrecognized(");
+    }
+
+    @Test
+    void hoistsAPolymorphicFieldsUnconditionallySharedFieldsOntoTheSealedInterface(@TempDir Path tempDir)
+            throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.CELESTIAL_OBJECT_SCHEMA);
+        Path operation =
+                writeFile(
+                        tempDir,
+                        "GetFeaturedCelestialObject.graphql",
+                        Fixtures.GET_FEATURED_CELESTIAL_OBJECT_OPERATION);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated");
+
+        String source = Files.readString(generatedFile(output, "generated", "GetFeaturedCelestialObjectQuery"));
+        // 'name' and 'constellation' are selected unconditionally on every branch, so callers get
+        // them straight off the interface instead of an exhaustive switch to reach a field every
+        // branch already has.
+        assertThat(source)
+                .contains(
+                        "public sealed interface Featured permits FeaturedStar, FeaturedNebula, FeaturedGalaxy,"
+                                + " FeaturedUnrecognized {\n"
+                                + "\n        String name();\n"
+                                + "\n        Constellation constellation();\n    }")
+                .contains("record FeaturedStar(\n            String name,\n            Constellation constellation,")
+                .contains("implements Featured");
+    }
+
+    @Test
+    void doesNotHoistABranchSpecificOverrideOfASharedField(@TempDir Path tempDir) throws IOException {
+        Path schema = writeFile(tempDir, "schema.graphqls", Fixtures.CELESTIAL_OBJECT_SCHEMA);
+        Path operation =
+                writeFile(
+                        tempDir,
+                        "GetFeaturedCelestialObject.graphql",
+                        """
+                        query GetFeaturedCelestialObject {
+                          featured {
+                            name
+                            constellation {
+                              name
+                            }
+                            ... on Star {
+                              spectralType
+                              constellation {
+                                name
+                              }
+                            }
+                            ... on Nebula {
+                              nebulaType
+                            }
+                            ... on Galaxy {
+                              distanceLightYears
+                            }
+                          }
+                        }
+                        """);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(operation), output, "generated");
+
+        String source = Files.readString(generatedFile(output, "generated", "GetFeaturedCelestialObjectQuery"));
+        // 'Star' re-selects 'constellation' itself: even though it asks for the exact same
+        // sub-selection, the compiler cannot assume that in general, so 'constellation' stays a
+        // branch-only accessor and only the untouched 'name' is hoisted.
+        assertThat(source)
+                .contains("public sealed interface Featured permits FeaturedStar, FeaturedNebula, FeaturedGalaxy,"
+                        + " FeaturedUnrecognized {\n"
+                        + "\n        String name();\n    }");
     }
 
     @Test

@@ -1,15 +1,13 @@
 # Integration tests
 
-Cross-module consumer projects live here, proving Izar's generated behavior
-across real process and HTTP boundaries. They are deliberately outside the
-reactor in [`../pom.xml`](../pom.xml): a consumer project must resolve Izar
-the way a real application does, from installed artifacts, so a test here
-proves something about what a consuming application actually gets. This is
-the acceptance suite for Izar's behavior, not a curated showcase; see
-[`examples/`](../examples) for that.
+Consumer projects that check Izar's generated code and client against real
+servers over HTTP. They sit outside the root reactor in
+[`../pom.xml`](../pom.xml) and resolve Izar from installed artifacts, the way
+an application does. Run `./mvnw install` at the repository root first. These
+projects are the acceptance suite. [`examples/`](../examples) holds the
+demonstration projects.
 
-Today the only project here is [`one-query-consumer`](one-query-consumer),
-which covers query and mutation execution, custom scalar decoding, variable
-encoding for generated input builders, and application-controlled retry on
-top of Izar's own single-attempt execution. Its [README](one-query-consumer/README.md)
-describes each test in detail.
+[`bookstore-consumer`](bookstore-consumer) covers query, mutation, and
+subscription execution, fragments and polymorphic decoding, custom scalars,
+variable encoding for generated inputs, and persisted-ID requests. Its
+[README](bookstore-consumer/README.md) describes each test.

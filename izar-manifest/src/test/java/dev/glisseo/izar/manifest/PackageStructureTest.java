@@ -27,9 +27,6 @@ class PackageStructureTest {
     private static final Set<String> CAPABILITY_PACKAGES = Set.of(
             "analysis", "assembly", "bundle", "publication", "source");
 
-    private static final List<String> CALLER_MODULES = List.of(
-            "izar-cli", "izar-client", "izar-compiler", "izar-controller", "izar-maven-plugin", "izar-server");
-
     private static final List<String> IMPLEMENTATION_PACKAGES = List.of(
             "dev.glisseo.izar.manifest.source.internal");
 
@@ -63,8 +60,21 @@ class PackageStructureTest {
     void callersDoNotImportCapabilityImplementationPackages() throws IOException {
         Path repository = Path.of("..").toAbsolutePath().normalize();
 
-        for (String module : CALLER_MODULES) {
+        List<String> callerModules;
+        try (var siblings = Files.list(repository)) {
+            callerModules = siblings
+                    .map(path -> path.getFileName().toString())
+                    .filter(name -> name.startsWith("izar-") && !name.equals("izar-manifest"))
+                    .sorted()
+                    .toList();
+        }
+
+        for (String module : callerModules) {
             Path sourceRoot = repository.resolve(module).resolve("src");
+            if (!Files.isDirectory(sourceRoot)) {
+                // A checkout that omits a caller module, such as the public export, has nothing to check.
+                continue;
+            }
             try (var files = Files.walk(sourceRoot)) {
                 files.filter(path -> path.toString().endsWith(".java")).forEach(path -> {
                     try {

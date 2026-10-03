@@ -14,13 +14,13 @@ import org.junit.jupiter.api.Test;
 class SchemaImpactAnalyzerTests {
 
     /**
-     * Issue 57/58: moving a field to a differently-named sibling type (query namespacing) made
+     * Moving a field to a differently-named sibling type (query namespacing) made
      * GraphQL Java's schema diffing report the move as a "rename" carrying a field-type-modification
-     * detail keyed by the field's new, post-rename name — a name {@code fromSchema}'s field
+     * detail keyed by the field's new, post-rename name, a name {@code fromSchema}'s field
      * container never had, since it was still on the old name. That first crashed with an NPE
-     * (issue 57); once the crash was fixed by cross-referencing the rename, the resulting "renamed
+     * once the crash was fixed by cross-referencing the rename, the resulting "renamed
      * to a field of a completely different type" report was still confusing, since nothing about the
-     * new field actually behaves like the old one. Per issue 58, a rename entangled with a type or
+     * new field actually behaves like the old one. A rename entangled with a type or
      * argument change is now reported as a plain removal of the old field plus an addition of the
      * new one instead, with no residual argument-level detail for the removed field.
      */
@@ -85,7 +85,7 @@ class SchemaImpactAnalyzerTests {
                 .contains(ImpactReport.Category.FIELD_REMOVED, ImpactReport.Category.FIELD_ADDED);
     }
 
-    /** A plain rename — no accompanying type or argument change — is still reported as a rename. */
+    /** A plain rename, no accompanying type or argument change, is still reported as a rename. */
     @Test
     void aPlainRenameWithNoOtherChangeIsStillReportedAsARename() {
         GraphQLSchema from = schema("""

@@ -1,8 +1,8 @@
 package dev.glisseo.izar.manifest.analysis;
 
 /**
- * The three distinct outcomes a {@link CompatibilityPolicy} evaluates a {@link CandidateCheckReport}
- * to, per decision 22 of the phase 2 specification.
+ * The outcomes returned when a {@link CompatibilityPolicy} evaluates a
+ * {@link CandidateCheckReport}.
  */
 public enum CandidateCheckOutcome {
     /** No candidate validation failure, and no policy-relevant structural change. */

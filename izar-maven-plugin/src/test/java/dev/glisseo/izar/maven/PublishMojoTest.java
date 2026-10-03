@@ -32,7 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * None of {@code controllerUrl}, {@code clientName}, {@code manifestVersion}, {@code
  * manifestFile}, {@code serverId}, or {@code skip} is ever overridden anywhere in the test suite:
- * {@code PublishFromDeveloperWorkflowTest} in izar-controller deliberately calls {@code
+ * a developer-workflow publication test elsewhere deliberately calls {@code
  * ManifestPublisher} directly, bypassing this Mojo's own parameter wiring entirely. These tests
  * drive {@link PublishMojo} itself to prove that wiring actually works.
  */
@@ -91,13 +91,13 @@ class PublishMojoTest {
         });
         Settings settings = new Settings();
         Server server = new Server();
-        server.setId("izar-controller");
+        server.setId("izar-manifest-service");
         server.setUsername("publisher");
         server.setPassword("secret");
         settings.addServer(server);
 
         PublishMojo mojo = mojo(manifestFile, "http://localhost:" + port, "catalog", "2026.09",
-                "izar-controller", false, envWithNoCredentials());
+                "izar-manifest-service", false, envWithNoCredentials());
         setField(mojo, "settings", settings);
 
         mojo.execute();

@@ -72,7 +72,7 @@ public final class ReactiveGraphQlOperations {
      * otherwise have to agree by hand.
      *
      * @param webClient scoped to the target endpoint's URL, as {@link GraphQlExecutionMode#FULL_DOCUMENT}
-     *     mode would use (see ADR 0010); carries whatever auth, headers, or filters the
+     *     mode would use; carries whatever auth, headers, or filters the
      *     application needs
      */
     public static ReactiveGraphQlOperations persistedQuery(WebClient webClient) {

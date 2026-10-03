@@ -26,23 +26,21 @@ import org.eclipse.aether.repository.RemoteRepository;
  * <p>This is a different exchange from {@link PublishMojo}'s {@code publish} goal. {@code publish}
  * registers a release with a controller's authenticated {@code /api/releases} endpoint over HTTP.
  * {@code deploy} instead uploads the manifest to an ordinary Maven repository under coordinates a
- * deployment build names explicitly, per issue 36. Neither goal depends on the other; a project can
+ * deployment build names explicitly. Neither goal depends on the other; a project can
  * use one, both, or neither.
  *
  * <p>The target coordinates ({@code groupId}, {@code artifactId}, {@code version}) are independent
  * of this project's own Maven coordinates: they are usually the client release identity ({@code
- * clientName} and {@code manifestVersion}) a deployment build's {@link AssembleMojo} configuration
- * will later name to resolve this exact artifact back. Because that identity is independent, this
+ * clientName} and {@code manifestVersion}) that a deployment build names in its {@link
+ * AssembleMojo} configuration when resolving this artifact. Because that identity is independent, this
  * goal deploys directly through {@code RepositorySystem.deploy}, the same seam {@code mvn deploy}
  * itself uses, rather than attaching a secondary artifact to this project's own reactor build,
  * which would force the manifest's version to always match the project's version.
  *
  * <p>Declares no credential parameter of any kind. {@code repositoryId} names a repository the
  * ambient {@link RepositorySystemSession} already resolves against {@code settings.xml} servers,
- * mirrors, and proxies, the exact mechanism {@code mvn deploy} and {@code deploy:deploy-file} rely
- * on. A password can no more reach this Mojo's configuration than it can {@link PublishMojo}'s; see
- * ADR 0017 for why that is a structural property, not a documentation convention, and the ADR
- * behind this goal for why the same property extends to repository credentials.
+ * mirrors, and proxies. Maven uses the same configuration when deploying project artifacts, so
+ * repository credentials do not need plugin parameters.
  */
 @Mojo(name = "deploy", threadSafe = true)
 public class DeployMojo extends AbstractMojo {

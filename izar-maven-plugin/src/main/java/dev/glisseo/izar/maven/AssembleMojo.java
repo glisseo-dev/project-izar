@@ -26,17 +26,16 @@ import org.eclipse.aether.resolution.ArtifactResult;
 /**
  * Resolves exact client releases through configured Maven repositories and company mirrors, then
  * assembles them into one pinned, union manifest with provenance and an input lock: {@code mvn
- * izar:assemble}. This is the deployment-build half of issue 36; {@link DeployMojo} is the
+ * izar:assemble}. {@link DeployMojo} is the
  * client-build half that publishes what this goal later resolves.
  *
  * <p>Holds no repository or assembly logic of its own. Every configured {@link
  * ReleaseArtifactParameter} names Maven coordinates this goal resolves through the ambient {@link
  * RepositorySystem} and {@link RepositorySystemSession}, the same repositories and mirrors any
  * other dependency in this build resolves through. Once every release is resolved to a local file,
- * this goal builds a {@link ReleaseSelection} exactly the way {@code izar-cli}'s {@code
- * AssembleCommand} does for a purely local selection, and hands it to the same {@link
- * ReleaseAssembler}. Repository access and local assembly stay separate seams; this Mojo only
- * bridges them, per ADR 0027 and the ADR behind this goal.
+ * this goal builds a {@link ReleaseSelection} exactly the way a purely local selection is
+ * built, and hands it to the same {@link ReleaseAssembler}. Repository access and local assembly stay separate seams; this Mojo only
+ * bridges them.
  *
  * <p>Every configured release is resolved even after one fails, so a broken configuration reports
  * every missing or unresolvable coordinate in one run. Resolution completes in full, or nothing is

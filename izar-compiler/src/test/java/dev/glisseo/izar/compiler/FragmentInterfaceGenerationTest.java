@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Covers issue 61: a named fragment made entirely of leaf fields (scalars, {@code __typename}, and
+ * Covers a named fragment made entirely of leaf fields (scalars, {@code __typename}, and
  * lists of either), spread unconditionally, generates a shared top-level interface that every
  * merged record implements. {@link OperationCompilerTest} keeps covering that the merged record
  * itself is unaffected (still exactly one flattened {@code Book} record, still the same fields).
@@ -297,7 +297,7 @@ class FragmentInterfaceGenerationTest {
     }
 
     @Test
-    void doesNotImplementWhenTheFragmentIsSpreadInsideAPolymorphicFieldsSelection(@TempDir Path tempDir)
+    void implementsWhenTheFragmentIsSpreadInsideAPolymorphicFieldsSelection(@TempDir Path tempDir)
             throws IOException {
         Path schema =
                 writeFile(
@@ -341,12 +341,132 @@ class FragmentInterfaceGenerationTest {
 
         new OperationCompiler().generate(List.of(schema), List.of(fragmentFile, operation), output, "generated.book");
 
-        // The fragment still qualifies for an interface on its own...
         assertThat(Files.exists(generatedFile(output, "generated.book", "SmallBoek"))).isTrue();
-        // ...but a spread inside a polymorphic field's branch selection is not tracked in v1: the
-        // branch record still gets the fragment's fields, just without 'implements'.
+        // An unconditional spread inside a polymorphic field's branch selection earns that branch
+        // record an 'implements' clause, the same as an ordinary object selection would.
+        String source = Files.readString(generatedFile(output, "generated.book", "SearchQuery"));
+        assertThat(source)
+                .contains("String id")
+                .contains("String name")
+                .contains("implements SmallBoek");
+    }
+
+    @Test
+    void doesNotImplementWhenTheSpreadInsideAPolymorphicBranchIsConditional(@TempDir Path tempDir)
+            throws IOException {
+        Path schema =
+                writeFile(
+                        tempDir,
+                        "schema.graphqls",
+                        """
+                        type Query {
+                          search: [SearchResult!]!
+                        }
+
+                        union SearchResult = Book | Movie
+
+                        type Book {
+                          id: ID!
+                          name: String!
+                        }
+
+                        type Movie {
+                          title: String!
+                        }
+                        """);
+        Path fragmentFile = writeFile(tempDir, "SmallBoek.graphql", SMALL_BOOK_FRAGMENT);
+        Path operation =
+                writeFile(
+                        tempDir,
+                        "Search.graphql",
+                        """
+                        query Search($include: Boolean!) {
+                          search {
+                            __typename
+                            ... on Book {
+                              ...SmallBoek @include(if: $include)
+                            }
+                            ... on Movie {
+                              title
+                            }
+                          }
+                        }
+                        """);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(fragmentFile, operation), output, "generated.book");
+
+        assertThat(Files.exists(generatedFile(output, "generated.book", "SmallBoek"))).isTrue();
         String source = Files.readString(generatedFile(output, "generated.book", "SearchQuery"));
         assertThat(source).contains("String id").contains("String name").doesNotContain("implements SmallBoek");
+    }
+
+    @Test
+    void implementsOnEveryBranchWhenTheFragmentIsSpreadAtThePolymorphicFieldsSharedLevel(@TempDir Path tempDir)
+            throws IOException {
+        Path schema =
+                writeFile(
+                        tempDir,
+                        "schema.graphqls",
+                        """
+                        type Query {
+                          search: [SearchResult!]!
+                        }
+
+                        interface SearchResult {
+                          id: ID!
+                        }
+
+                        type Book implements SearchResult {
+                          id: ID!
+                          name: String!
+                        }
+
+                        type Movie implements SearchResult {
+                          id: ID!
+                          title: String!
+                        }
+                        """);
+        Path fragmentFile =
+                writeFile(
+                        tempDir,
+                        "WithId.graphql",
+                        """
+                        fragment WithId on SearchResult {
+                          id
+                        }
+                        """);
+        Path operation =
+                writeFile(
+                        tempDir,
+                        "Search.graphql",
+                        """
+                        query Search {
+                          search {
+                            ...WithId
+                            ... on Book {
+                              name
+                            }
+                            ... on Movie {
+                              title
+                            }
+                          }
+                        }
+                        """);
+        Path output = tempDir.resolve("out");
+
+        new OperationCompiler().generate(List.of(schema), List.of(fragmentFile, operation), output, "generated.book");
+
+        assertThat(Files.exists(generatedFile(output, "generated.book", "WithId"))).isTrue();
+        // A fragment spread unconditionally at the shared level of the polymorphic selection is
+        // merged into every branch's fields (and the unrecognized catch-all's), so every one of
+        // those records implements it too.
+        String source = Files.readString(generatedFile(output, "generated.book", "SearchQuery"));
+        assertThat(source)
+                .containsOnlyOnce("public record SearchResultBook(")
+                .containsOnlyOnce("public record SearchResultMovie(")
+                .containsOnlyOnce("public record SearchResultUnrecognized(")
+                .contains("implements WithId, SearchResult {}");
     }
 
     @Test

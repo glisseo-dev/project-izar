@@ -37,12 +37,12 @@ class PublishCredentialsTest {
     void fallsBackToTheReferencedSettingsXmlServerWhenNoEnvironmentVariablesAreSet() {
         var settings = new Settings();
         var server = new Server();
-        server.setId("izar-controller");
+        server.setId("izar-manifest-service");
         server.setUsername("publisher");
         server.setPassword("secret");
         settings.addServer(server);
 
-        var credentials = PublishCredentials.resolve(key -> null, settings, identityDecrypter(), "izar-controller");
+        var credentials = PublishCredentials.resolve(key -> null, settings, identityDecrypter(), "izar-manifest-service");
 
         assertThat(credentials).isEqualTo(new PublishCredentials.Credentials("publisher", "secret"));
     }
@@ -51,7 +51,7 @@ class PublishCredentialsTest {
     void decryptsAnEncryptedSettingsXmlServerPassword() {
         var settings = new Settings();
         var server = new Server();
-        server.setId("izar-controller");
+        server.setId("izar-manifest-service");
         server.setUsername("publisher");
         server.setPassword("{encrypted}");
         settings.addServer(server);
@@ -61,7 +61,7 @@ class PublishCredentialsTest {
         decrypted.setPassword("secret");
         SettingsDecryptionResult result = fixedResult(decrypted, List.of());
 
-        var credentials = PublishCredentials.resolve(key -> null, settings, request -> result, "izar-controller");
+        var credentials = PublishCredentials.resolve(key -> null, settings, request -> result, "izar-manifest-service");
 
         assertThat(credentials).isEqualTo(new PublishCredentials.Credentials("publisher", "secret"));
     }
@@ -85,13 +85,13 @@ class PublishCredentialsTest {
     void failsWhenTheReferencedServerHasNoPassword() {
         var settings = new Settings();
         var server = new Server();
-        server.setId("izar-controller");
+        server.setId("izar-manifest-service");
         server.setUsername("publisher");
         settings.addServer(server);
 
-        assertThatThrownBy(() -> PublishCredentials.resolve(key -> null, settings, identityDecrypter(), "izar-controller"))
+        assertThatThrownBy(() -> PublishCredentials.resolve(key -> null, settings, identityDecrypter(), "izar-manifest-service"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("izar-controller");
+                .hasMessageContaining("izar-manifest-service");
     }
 
     private static org.apache.maven.settings.crypto.SettingsDecrypter identityDecrypter() {

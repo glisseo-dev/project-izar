@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono;
  *
  * <p>{@code webClient} is expected to already be scoped to the same endpoint URL {@code
  * FULL_DOCUMENT} mode uses: a compatible server resolves this shape's document server-side on its
- * standard endpoint, so no separate URL is needed (see ADR 0010). Subscription responses use
+ * standard endpoint, so no separate URL is needed. Subscription responses use
  * HTTP SSE; an SSE {@code error} event terminates the stream with a {@link
  * SubscriptionErrorException}.
  */

@@ -31,7 +31,7 @@
  * unsupported operation feature or an unmapped custom scalar fails with a diagnostic rather
  * than producing a silently incomplete model.
  *
- * <p>Nothing here depends on Maven, so a later Gradle adapter can reuse it.
+ * <p>The compiler has no Maven dependency, so it can run independently of the Maven plugin.
  */
 @NullMarked
 package dev.glisseo.izar.compiler;

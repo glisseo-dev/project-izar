@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * One stored operation document that {@link CandidateChecker} found does not validate against the
- * candidate schema with GraphQL Java's own {@link graphql.validation.Validator}, per decision 19 of
- * the phase 2 specification: a definite incompatibility, not a heuristic derived from structural
+ * candidate schema with GraphQL Java's own {@link graphql.validation.Validator}. This is a
+ * definite incompatibility, not a heuristic derived from structural
  * diffing.
  *
  * @param operationId the failing operation's {@link ManifestOperation#id()}

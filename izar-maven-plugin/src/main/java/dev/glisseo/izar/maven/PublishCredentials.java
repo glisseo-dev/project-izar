@@ -15,9 +15,8 @@ import org.jspecify.annotations.Nullable;
  * there is deliberately no such {@code @Parameter} for either field, so a password can never appear
  * in a POM, a Maven {@code -D} flag, or a build log.
  *
- * <p>Kept free of {@link org.apache.maven.plugin.AbstractMojo} so it is testable with plain
- * objects, not a Maven plugin test harness. See ADR 0017 for why there is no password
- * {@code @Parameter} at all, on this class or {@link PublishMojo}.
+ * <p>This resolver has no Maven plugin superclass or parameters. It accepts credentials only from
+ * environment variables or a Maven settings server entry.
  */
 final class PublishCredentials {
 

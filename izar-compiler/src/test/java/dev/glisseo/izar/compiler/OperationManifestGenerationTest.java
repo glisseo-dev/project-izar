@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Issue 09's first two acceptance criteria: generation emits an Apollo-compatible manifest whose
+ * Generation emits an Apollo-compatible manifest whose
  * IDs and bodies describe the exact final executable document, and identical inputs reproduce it.
  */
 class OperationManifestGenerationTest {
@@ -35,7 +35,7 @@ class OperationManifestGenerationTest {
         ManifestOperation entry = manifest.operations().get(0);
         assertThat(entry.name()).isEqualTo("GetBook");
         assertThat(entry.type()).isEqualTo("query");
-        // The body is minified (issue 18): insignificant whitespace collapsed, comments dropped.
+        // Insignificant whitespace is collapsed and comments are dropped.
         assertThat(entry.body())
                 .isEqualTo(AstPrinter.printAstCompact(Parser.parse(Fixtures.GET_BOOK_OPERATION)));
         // ManifestOperation's own canonical constructor already rejects a mismatched id; this

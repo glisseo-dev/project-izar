@@ -35,8 +35,7 @@ import org.jspecify.annotations.Nullable;
  * Entry point for generating Java sources from a schema and a set of operation files.
  *
  * <p>This is the seam that keeps compiler behavior out of the Maven lifecycle: {@code
- * izar-maven-plugin} binds parameters and phases, and calls this. A later Gradle adapter would
- * call the same method.
+ * izar-maven-plugin} binds parameters and phases, and calls this.
  *
  * <p>Every operation file is attempted, even after one fails, so a single {@code generate-sources}
  * run reports every problem at once rather than only the first file's.
@@ -62,7 +61,7 @@ public final class OperationCompiler {
      */
     public OperationManifest generate(
             List<Path> schemaFiles, List<Path> operationFiles, Path outputDirectory, String basePackage) {
-        return generate(schemaFiles, operationFiles, outputDirectory, basePackage, List.of());
+        return generate(schemaFiles, operationFiles, outputDirectory, basePackage, List.of(), GenerationMode.IZAR);
     }
 
     /**
@@ -82,6 +81,27 @@ public final class OperationCompiler {
             Path outputDirectory,
             String basePackage,
             List<ScalarMapping> scalarMappings) {
+        return generate(schemaFiles, operationFiles, outputDirectory, basePackage, scalarMappings, GenerationMode.IZAR);
+    }
+
+    /** Same as {@link #generate(List, List, Path, String)}, with an explicit source generation mode. */
+    public OperationManifest generate(
+            List<Path> schemaFiles,
+            List<Path> operationFiles,
+            Path outputDirectory,
+            String basePackage,
+            GenerationMode generationMode) {
+        return generate(schemaFiles, operationFiles, outputDirectory, basePackage, List.of(), generationMode);
+    }
+
+    /** Same as {@link #generate(List, List, Path, String, List)}, with an explicit source generation mode. */
+    public OperationManifest generate(
+            List<Path> schemaFiles,
+            List<Path> operationFiles,
+            Path outputDirectory,
+            String basePackage,
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
         GraphQLSchema schema = SchemaLoader.load(schemaFiles);
         FragmentLibrary fragmentLibrary = FragmentLibrary.parse(operationFiles);
         ScalarMappingRegistry scalarMappingRegistry = ScalarMappingRegistry.of(scalarMappings);
@@ -96,22 +116,32 @@ public final class OperationCompiler {
                     outputDirectory,
                     basePackage,
                     fragmentInterface.javaTypeName(),
-                    SourceGenerator.generateFragmentInterface(basePackage, fragmentInterface));
+                    SourceGenerator.generateFragmentInterface(basePackage, fragmentInterface, generationMode));
         }
 
         List<String> diagnostics = new ArrayList<>();
         List<ManifestOperation> manifestOperations = new ArrayList<>();
+        Map<String, Path> operationFilesByGeneratedType = new LinkedHashMap<>();
         for (Path operationFile : fragmentLibrary.operationFiles()) {
             try {
-                manifestOperations.add(
-                        generateOne(
-                                schema,
-                                operationFile,
-                                fragmentLibrary,
-                                outputDirectory,
-                                basePackage,
-                                scalarMappingRegistry,
-                                eligibleFragments));
+                ManifestOperation operation = generateOne(
+                        schema,
+                        operationFile,
+                        fragmentLibrary,
+                        outputDirectory,
+                        basePackage,
+                        scalarMappingRegistry,
+                        eligibleFragments,
+                        generationMode);
+                Path previous = operationFilesByGeneratedType.putIfAbsent(
+                        operation.name() + "/" + operation.type(), operationFile);
+                if (previous != null) {
+                    diagnostics.add(operationFile + ": " + operation.type() + " '" + operation.name()
+                            + "' is already defined in " + previous
+                            + ", so both would generate the same Java type.");
+                    continue;
+                }
+                manifestOperations.add(operation);
             } catch (OperationGenerationException e) {
                 diagnostics.addAll(e.diagnostics());
             }
@@ -131,19 +161,72 @@ public final class OperationCompiler {
             Path outputDirectory,
             String basePackage,
             List<ScalarMapping> scalarMappings) {
-        compileManifest(schemaFiles, manifestFile, outputDirectory, basePackage, scalarMappings);
+        generateFromManifest(schemaFiles, manifestFile, outputDirectory, basePackage, scalarMappings, GenerationMode.IZAR);
+    }
+
+    /** Generates classes from a manifest in the requested source mode, preserving its IDs and documents. */
+    public void generateFromManifest(
+            List<Path> schemaFiles,
+            Path manifestFile,
+            Path outputDirectory,
+            String basePackage,
+            GenerationMode generationMode) {
+        generateFromManifest(schemaFiles, manifestFile, outputDirectory, basePackage, List.of(), generationMode);
+    }
+
+    /** Generates classes from a manifest using the requested source mode, preserving its IDs and documents. */
+    public void generateFromManifest(
+            List<Path> schemaFiles,
+            Path manifestFile,
+            Path outputDirectory,
+            String basePackage,
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
+        compileManifest(schemaFiles, manifestFile, outputDirectory, basePackage, scalarMappings, generationMode);
     }
 
     /** Checks whether every operation in a manifest can generate Java, without writing source files. */
     public void validateManifest(
             List<Path> schemaFiles, Path manifestFile, String basePackage, List<ScalarMapping> scalarMappings) {
-        compileManifest(schemaFiles, manifestFile, null, basePackage, scalarMappings);
+        validateManifest(schemaFiles, manifestFile, basePackage, scalarMappings, GenerationMode.IZAR);
+    }
+
+    /** Checks whether every operation in a manifest can generate Java in the requested source mode. */
+    public void validateManifest(
+            List<Path> schemaFiles, Path manifestFile, String basePackage, GenerationMode generationMode) {
+        validateManifest(schemaFiles, manifestFile, basePackage, List.of(), generationMode);
+    }
+
+    /** Checks whether every operation in a manifest can generate Java in the requested source mode. */
+    public void validateManifest(
+            List<Path> schemaFiles,
+            Path manifestFile,
+            String basePackage,
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
+        compileManifest(schemaFiles, manifestFile, null, basePackage, scalarMappings, generationMode);
     }
 
     /** Checks a manifest against an already loaded schema without writing source files. */
     public void validateManifest(
             GraphQLSchema schema, Path manifestFile, String basePackage, List<ScalarMapping> scalarMappings) {
-        compileManifest(schema, manifestFile, null, basePackage, scalarMappings);
+        validateManifest(schema, manifestFile, basePackage, scalarMappings, GenerationMode.IZAR);
+    }
+
+    /** Checks a manifest against an already loaded schema in the requested source mode. */
+    public void validateManifest(
+            GraphQLSchema schema, Path manifestFile, String basePackage, GenerationMode generationMode) {
+        validateManifest(schema, manifestFile, basePackage, List.of(), generationMode);
+    }
+
+    /** Checks a manifest against an already loaded schema in the requested source mode. */
+    public void validateManifest(
+            GraphQLSchema schema,
+            Path manifestFile,
+            String basePackage,
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
+        compileManifest(schema, manifestFile, null, basePackage, scalarMappings, generationMode);
     }
 
     private void compileManifest(
@@ -151,8 +234,10 @@ public final class OperationCompiler {
             Path manifestFile,
             Path outputDirectory,
             String basePackage,
-            List<ScalarMapping> scalarMappings) {
-        compileManifest(SchemaLoader.load(schemaFiles), manifestFile, outputDirectory, basePackage, scalarMappings);
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
+        compileManifest(
+                SchemaLoader.load(schemaFiles), manifestFile, outputDirectory, basePackage, scalarMappings, generationMode);
     }
 
     private void compileManifest(
@@ -160,7 +245,8 @@ public final class OperationCompiler {
             Path manifestFile,
             @Nullable Path outputDirectory,
             String basePackage,
-            List<ScalarMapping> scalarMappings) {
+            List<ScalarMapping> scalarMappings,
+            GenerationMode generationMode) {
         OperationManifestInput manifest;
         try {
             manifest = OperationManifestInput.fromJson(Files.readString(manifestFile));
@@ -222,7 +308,7 @@ public final class OperationCompiler {
                         outputDirectory,
                         basePackage,
                         fragmentInterface.javaTypeName(),
-                        SourceGenerator.generateFragmentInterface(basePackage, fragmentInterface));
+                        SourceGenerator.generateFragmentInterface(basePackage, fragmentInterface, generationMode));
             }
         }
 
@@ -232,7 +318,15 @@ public final class OperationCompiler {
             OperationParser.ParsedOperation parsed = parsedOperations.get(i);
             try {
                 generateManifestOperation(
-                        schema, manifestFile, entry, parsed, outputDirectory, basePackage, mappings, eligibleFragments);
+                        schema,
+                        manifestFile,
+                        entry,
+                        parsed,
+                        outputDirectory,
+                        basePackage,
+                        mappings,
+                        eligibleFragments,
+                        generationMode);
             } catch (OperationGenerationException e) {
                 generationDiagnostics.addAll(e.diagnostics());
             }
@@ -250,7 +344,8 @@ public final class OperationCompiler {
             Path outputDirectory,
             String basePackage,
             ScalarMappingRegistry scalarMappings,
-            Map<String, FragmentInterface> eligibleFragments) {
+            Map<String, FragmentInterface> eligibleFragments,
+            GenerationMode generationMode) {
         generateParsedOperation(
                 schema,
                 manifestFile,
@@ -259,7 +354,8 @@ public final class OperationCompiler {
                 basePackage,
                 scalarMappings,
                 eligibleFragments,
-                entry.id());
+                entry.id(),
+                generationMode);
     }
 
     private ManifestOperation generateOne(
@@ -269,7 +365,8 @@ public final class OperationCompiler {
             Path outputDirectory,
             String basePackage,
             ScalarMappingRegistry scalarMappings,
-            Map<String, FragmentInterface> eligibleFragments) {
+            Map<String, FragmentInterface> eligibleFragments,
+            GenerationMode generationMode) {
         OperationParser.ParsedOperation parsed = OperationParser.parse(schema, operationFile, fragmentLibrary);
         GeneratedOperation generated = generateParsedOperation(
                 schema,
@@ -279,7 +376,8 @@ public final class OperationCompiler {
                 basePackage,
                 scalarMappings,
                 eligibleFragments,
-                null);
+                null,
+                generationMode);
         return new ManifestOperation(
                 generated.operationId(),
                 generated.documentText(),
@@ -295,7 +393,8 @@ public final class OperationCompiler {
             String basePackage,
             ScalarMappingRegistry scalarMappings,
             Map<String, FragmentInterface> eligibleFragments,
-            @Nullable String suppliedOperationId) {
+            @Nullable String suppliedOperationId,
+            GenerationMode generationMode) {
         GraphQlOperationKind operationKind = operationKind(parsed.definition());
         GraphQLObjectType rootType = switch (operationKind) {
             case QUERY -> schema.getQueryType();
@@ -332,12 +431,21 @@ public final class OperationCompiler {
         Set<String> usedTypeNames = new HashSet<>();
         usedTypeNames.add("Data");
         SelectionAnalyzer.Result selection = SelectionAnalyzer.analyze(
-                schema, sourceFile, parsed, rootType, usedTypeNames, scalarMappings, eligibleFragments);
+                schema,
+                sourceFile,
+                parsed,
+                rootType,
+                usedTypeNames,
+                scalarMappings,
+                eligibleFragments,
+                generationMode == GenerationMode.JACKSON);
         if (suppliedOperationId != null && !selection.discriminatorInjections().isEmpty()) {
             throw new OperationGenerationException(
                     sourceFile + ": operation '" + parsed.operationName() + "' (id '" + suppliedOperationId
                             + "') needs an unconditional __typename selection to generate polymorphic Java types."
-                            + " Add an unaliased __typename to the shared selection or to every concrete branch."
+                            + (generationMode == GenerationMode.JACKSON
+                                    ? " Add an unconditional, unaliased __typename to the shared selection."
+                                    : " Add an unaliased __typename to the shared selection or to every concrete branch.")
                             + " Manifest documents and IDs are preserved and will not be rewritten.");
         }
         VariableAnalyzer.Result variables =
@@ -366,7 +474,8 @@ public final class OperationCompiler {
                         operationKind,
                         selection.root(),
                         selection.enumTypes(),
-                        variables);
+                        variables,
+                        generationMode);
 
         if (outputDirectory != null) {
             writeSource(outputDirectory, basePackage, className, source);

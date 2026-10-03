@@ -1,0 +1,12 @@
+query GetObservations($locationId: ID!) {
+  observations(locationId: $locationId) {
+    id
+    observedAt
+    conditions
+    notes
+    subject {
+      id
+      name
+    }
+  }
+}

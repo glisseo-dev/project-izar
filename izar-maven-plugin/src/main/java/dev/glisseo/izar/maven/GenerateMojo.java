@@ -1,5 +1,6 @@
 package dev.glisseo.izar.maven;
 
+import dev.glisseo.izar.compiler.GenerationMode;
 import dev.glisseo.izar.compiler.OperationCompiler;
 import dev.glisseo.izar.compiler.OperationGenerationException;
 import dev.glisseo.izar.compiler.ScalarMapping;
@@ -61,6 +62,10 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(property = "izar.basePackage", required = true)
     private String basePackage;
 
+    /** Generated response model and decoder style. */
+    @Parameter(property = "izar.generationMode", defaultValue = "IZAR")
+    private GenerationMode generationMode = GenerationMode.IZAR;
+
     @Parameter(property = "izar.skip", defaultValue = "false")
     private boolean skip;
 
@@ -101,7 +106,8 @@ public class GenerateMojo extends AbstractMojo {
                                 manifestInput.toPath(),
                                 outputDirectory.toPath(),
                                 basePackage,
-                                scalarMappings);
+                                scalarMappings,
+                                generationMode);
             } catch (OperationGenerationException e) {
                 throw new MojoExecutionException(e.getMessage(), e);
             } catch (InvalidManifestException e) {
@@ -134,7 +140,8 @@ public class GenerateMojo extends AbstractMojo {
                                     operationFiles,
                                     outputDirectory.toPath(),
                                     basePackage,
-                                    scalarMappings);
+                                    scalarMappings,
+                                    generationMode);
         } catch (OperationGenerationException e) {
             // Rethrown as a MojoExecutionException so Maven prints the diagnostic cleanly
             // instead of this tool's own stack trace.

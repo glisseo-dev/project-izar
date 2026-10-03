@@ -1,0 +1,11 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: nightsky-gradle-client
+  main:
+    banner-mode: "off"
+
+nightsky:
+  server-url: http://localhost:8083/graphql

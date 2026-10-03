@@ -3,9 +3,7 @@
 A Maven-only deployment build: no Java sources, no application to run. Its
 job is to stand in for a release engineer's pipeline that resolves several
 clients' published manifests and assembles them into one deployable,
-supported release, the way [issue 33](../../.scratch/izar-prototype/issues/33-assemble-explicit-supported-release-selections.md)
-and [issue 36](../../.scratch/izar-prototype/issues/36-publish-and-resolve-manifests-through-maven-repositories.md)
-describe.
+supported release.
 
 This project is deliberately outside the root Maven reactor (see
 [`../../README.md`](../../README.md)): it resolves Izar and the two Nightsky
@@ -103,11 +101,3 @@ the ordinary case for a rolling deployment carrying both an old and a new
 client version at once. See
 [`ClientRelease`](../../izar-manifest/src/main/java/dev/glisseo/izar/manifest/assembly/ClientRelease.java)
 in `izar-manifest`.
-
-## The other assembly path: izar-cli
-
-`izar-cli`'s `AssembleCommand` performs the identical union/provenance/lock
-logic from a local `selection.json` and local manifest files, with no Maven
-project and no repository resolution at all — see
-[`izar-maven-plugin`](../../izar-maven-plugin/README.md)'s own description
-of the `assemble` goal for how the two relate.

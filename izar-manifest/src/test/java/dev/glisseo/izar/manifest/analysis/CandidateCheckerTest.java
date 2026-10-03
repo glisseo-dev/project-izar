@@ -179,7 +179,7 @@ class CandidateCheckerTest {
     }
 
     @Test
-    void anEnumValueRemovalIsAttributedAtTheEnclosingTypeLevelPerAdr0019And0020() {
+    void anEnumValueRemovalIsAttributedAtTheEnclosingTypeLevel() {
         GraphQLSchema baseline = schema("""
                 type Query { things(status: Status): [Thing!]! }
                 type Thing { id: ID! }

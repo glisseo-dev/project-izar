@@ -1,8 +1,9 @@
 package dev.glisseo.izar.manifest.analysis;
 
 /**
- * How a caller wants a {@link CandidateCheckReport} judged, per decision 22 of the phase 2
- * specification: "the caller chooses whether advisory compatibility findings fail CI."
+ * How a caller wants a {@link CandidateCheckReport} judged. Strict policy fails on breaking
+ * structural changes and incomplete usage analysis; advisory policy fails only on confirmed
+ * validation errors.
  *
  * <p>A candidate validation failure is never advisory under either policy: GraphQL Java's validator
  * has already confirmed the operation would not execute against the candidate, so both policies

@@ -8,7 +8,7 @@ import java.util.Optional;
  * client developer can tell which policy evaluated the request rather than inferring it from
  * whether the request happened to succeed.
  *
- * <p>Both {@code izar-server} (the writer) and {@code izar-client} (a potential reader) depend on
+ * <p>Both a server (the writer) and {@code izar-client} (a potential reader) depend on
  * {@code izar-manifest} already, so this is the one place that owns the extension's wire shape
  * ({@code "izar"}, {@code mode}, {@code registered}, {@code revision}), the same way {@link
  * PersistedQueryExtension} owns the request-side extension.

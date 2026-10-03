@@ -19,11 +19,10 @@ public enum GraphQlExecutionMode {
      *
      * <p>{@link PersistedIdGraphQlClient} builds this mode's client over a {@code GraphQlTransport}
      * that never reads the request's document text, so the operation's real document never reaches
-     * the wire. A compatible {@code izar-server} endpoint resolves it from its own registry by ID
-     * alone. The request goes to the same URL as {@link #FULL_DOCUMENT} mode's. {@code
-     * izar-server}'s standard {@code /graphql} endpoint accepts both shapes, via {@code
-     * graphql-java}'s own {@code PreparsedDocumentProvider} extension point rather than a
-     * dedicated endpoint. See ADR 0010 for the full design.
+     * the wire. A compatible server endpoint resolves it from its own registry by ID alone. The
+     * request goes to the same URL as {@link #FULL_DOCUMENT} mode's, so one standard {@code
+     * /graphql} endpoint can accept both shapes, via {@code graphql-java}'s own {@code
+     * PreparsedDocumentProvider} extension point rather than a dedicated endpoint.
      */
     PERSISTED_ID
 }

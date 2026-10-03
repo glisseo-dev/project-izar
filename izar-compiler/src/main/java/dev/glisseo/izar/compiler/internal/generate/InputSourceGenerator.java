@@ -9,7 +9,10 @@ import dev.glisseo.izar.compiler.internal.variable.InputEnumType;
 import dev.glisseo.izar.compiler.internal.variable.InputFieldDefinition;
 import dev.glisseo.izar.compiler.internal.variable.InputObjectType;
 import dev.glisseo.izar.compiler.internal.variable.InputShape;
+import dev.glisseo.izar.compiler.internal.variable.VariableAnalyzer;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Renders the input side of a generated operation: enum types, input-object types with their
@@ -25,6 +28,32 @@ import java.util.List;
 final class InputSourceGenerator {
 
     private InputSourceGenerator() {}
+
+    static List<CustomScalarType> collectCustomScalars(VariableAnalyzer.Result variables) {
+        Map<String, CustomScalarType> byGraphqlName = new LinkedHashMap<>();
+        for (InputFieldDefinition variable : variables.variables()) {
+            collectFromInputShape(variable.shape(), byGraphqlName);
+        }
+        for (InputObjectType inputObjectType : variables.inputObjectTypes()) {
+            for (InputFieldDefinition field : inputObjectType.fields()) {
+                collectFromInputShape(field.shape(), byGraphqlName);
+            }
+        }
+        return List.copyOf(byGraphqlName.values());
+    }
+
+    private static void collectFromInputShape(InputShape shape, Map<String, CustomScalarType> byGraphqlName) {
+        switch (shape) {
+            case InputShape.ScalarShape scalar -> {
+                if (scalar.scalar() instanceof CustomScalarType custom) {
+                    byGraphqlName.putIfAbsent(custom.graphqlName(), custom);
+                }
+            }
+            case InputShape.ListShape list -> collectFromInputShape(list.elementShape(), byGraphqlName);
+            case InputShape.EnumShape ignored -> {}
+            case InputShape.InputObjectShape ignored -> {}
+        }
+    }
 
     static void appendEnumType(StringBuilder out, InputEnumType type) {
         out.append("    public enum ").append(type.javaTypeName()).append(" {\n");

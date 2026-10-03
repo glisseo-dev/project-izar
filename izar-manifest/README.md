@@ -1,6 +1,6 @@
 # Izar manifest
 
-Izar manifest reads, writes, merges, and validates Apollo-compatible persisted-query manifests, and defines the `ManifestSource` seam that supplies a versioned snapshot of one independently of transport. The compiler produces manifests, the client derives the same operation IDs a manifest carries, the server activates manifests it reads through a `ManifestSource`, and the controller stores and serves them. Each of those modules already depends on this one, so the manifest format and the ID derivation live here once instead of drifting across four independent implementations.
+Izar manifest reads, writes, merges, and validates Apollo-compatible persisted-query manifests, and defines the `ManifestSource` seam that supplies a versioned snapshot of one independently of transport. The compiler produces manifests, the client derives the same operation IDs a manifest carries, the server activates manifests it reads through a `ManifestSource`, and a manifest controller stores and serves them. The compiler, client, and server already depend on this one, so the manifest format and the ID derivation live here once instead of drifting across independent implementations.
 
 ## Add the dependency
 
@@ -12,7 +12,7 @@ Izar manifest reads, writes, merges, and validates Apollo-compatible persisted-q
 </dependency>
 ```
 
-Most adopters never add this by hand. It arrives transitively through [izar-client](../izar-client/), [izar-server](../izar-server/), [izar-compiler](../izar-compiler/), and [izar-maven-plugin](../izar-maven-plugin/). Add it directly when implementing a custom `ManifestSource` (an S3 bucket, an Artifactory repository) or a non-Maven build integration that needs `ManifestPublisher` without pulling in the compiler.
+Most adopters never add this by hand. It arrives transitively through [izar-client](../izar-client/), [izar-compiler](../izar-compiler/), and [izar-maven-plugin](../izar-maven-plugin/). Add it directly when implementing a custom `ManifestSource` (an S3 bucket, an Artifactory repository) or a non-Maven build integration that needs `ManifestPublisher` without pulling in the compiler.
 
 ## Package organization
 
@@ -42,11 +42,11 @@ manifest. It accepts any nonblank operation ID and keeps the exact body string.
 The regular `OperationManifest.fromJson` reader retains the hash check for the
 other manifest workflows.
 
-Combining manifests is append-only: an operation whose ID already exists with an identical entry deduplicates silently, but an operation whose ID collides with an entry carrying a different `body`, `name`, or `type` is rejected rather than overwriting what's already registered. [izar-controller](../izar-controller/) applies this rule when folding a newly published release into its current snapshot; this module supplies the format and the identity check (`ManifestOperation`'s equality and its constructor's hash validation) that make the rule meaningful, not a merge method of its own.
+Combining manifests is append-only: an operation whose ID already exists with an identical entry deduplicates silently, but an operation whose ID collides with an entry carrying a different `body`, `name`, or `type` is rejected rather than overwriting what's already registered. A manifest controller applies this rule when folding a newly published release into its current snapshot; this module supplies the format and the identity check (`ManifestOperation`'s equality and its constructor's hash validation) that make the rule meaningful, not a merge method of its own.
 
 ## ManifestSource
 
-`ManifestSource` is a single-method interface: `load()` returns a `ManifestSnapshot`, a manifest paired with a revision identifying that particular load. A source only reads and parses; it never validates against a schema, decides whether to activate what it read, or remembers a previously loaded snapshot; a caller such as izar-server's activation logic owns those decisions because only it knows the target schema and the currently active registry.
+`ManifestSource` is a single-method interface: `load()` returns a `ManifestSnapshot`, a manifest paired with a revision identifying that particular load. A source only reads and parses; it never validates against a schema, decides whether to activate what it read, or remembers a previously loaded snapshot; the caller's activation logic owns those decisions because only it knows the target schema and the currently active registry.
 
 Two implementations ship with this module through the `ManifestSources` factory:
 
@@ -63,8 +63,6 @@ A custom source, for a different object store or artifact repository, implements
 
 `ManifestPublisher` takes a `URI`, credentials, and an `OperationManifest` as plain constructor and method arguments, with no dependency on Maven, Gradle, or any other build tool. That's why [izar-maven-plugin](../izar-maven-plugin/)'s publish goal calls it directly instead of reimplementing the HTTP call, and why a Gradle task or a CI script can do the same.
 
-For the full release envelope, the conflict and validation responses a controller returns, and the schema-upload and coverage endpoints, see [Publish and inspect manifests and schemas](../docs/controller-publication.md).
-
 ## What this module does not do
 
 Izar manifest registers and reads manifests; it does not manage their lifecycle beyond that. In particular, it has no concept of retiring or expiring a previously registered operation, no key rotation for publisher credentials, and no approval workflow gating what a publish request registers. A controller that wants any of those builds them on top of the registration and snapshot primitives this module defines, since none of them are part of the Apollo-compatible manifest format itself.
@@ -75,5 +73,3 @@ Izar manifest registers and reads manifests; it does not manage their lifecycle 
 - [izar-operation](../izar-operation/) defines the operation contract a generated class implements; its `operationId()` matches the ID a manifest entry for the same document carries.
 - [izar-compiler](../izar-compiler/) generates the manifest this module's types read, write, and validate.
 - [izar-client](../izar-client/) derives persisted-ID request IDs the same way `ManifestOperation` derives a manifest entry's ID.
-- [izar-server](../izar-server/) activates manifests loaded through a `ManifestSource` and enforces them against incoming requests.
-- [izar-controller](../izar-controller/) is the `ManifestPublisher` target and the typical HTTP manifest source origin.

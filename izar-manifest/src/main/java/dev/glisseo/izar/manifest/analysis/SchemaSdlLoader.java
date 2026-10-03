@@ -12,8 +12,7 @@ import java.nio.file.Path;
 /**
  * Loads a locally composed schema SDL document into a {@link GraphQLSchema}, never by live
  * introspection or a federation composition step: {@link CandidateChecker}'s baseline and
- * candidate inputs are ordinary, already-composed SDL text, per decision 18 of the phase 2
- * specification.
+ * candidate inputs are ordinary, already-composed SDL text.
  *
  * <p>Builds an "un-executable" schema, the same way {@code izar-compiler}'s own schema loader and
  * the controller's {@code SchemaRegistry} do: no {@code DataFetcher} is wired, since checking and

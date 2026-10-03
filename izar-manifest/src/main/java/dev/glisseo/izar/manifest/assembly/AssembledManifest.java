@@ -14,8 +14,7 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>{@code manifest} stays exactly the portable, Apollo-compatible contract {@link
  * OperationManifest} always is; nothing here reformats it or changes an operation's ID. Provenance
- * and the lock are assembly-specific metadata that travels alongside it, never inside it, per ADR
- * 0011.
+ * and the lock are assembly-specific metadata that travels alongside it, never inside it.
  *
  * @param manifest the assembled union, deduplicated by operation ID
  * @param provenance every operation's contributing releases, in the same order as {@code
@@ -50,8 +49,8 @@ public record AssembledManifest(OperationManifest manifest, List<OperationProven
      * {@code lock.json}. The three files are not one atomic set, though: if the process fails
      * between renaming the first and the last, {@code outputDirectory} can hold a mix of newly
      * written and previously existing files. That window is the same one an ordinary deployment
-     * already lives with when replacing local configuration; a controller-published release (see
-     * ADR 0027) carries the stronger, single-file atomic-rename guarantee of ADR 0014.
+     * already lives with when replacing local configuration; controller publication uses one
+     * atomic rename for its single manifest file.
      *
      * @throws AssemblyException if a JSON body cannot be rendered or a file cannot be written
      */

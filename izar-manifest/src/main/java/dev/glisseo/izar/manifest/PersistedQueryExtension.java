@@ -7,8 +7,8 @@ import java.util.Optional;
  * The Apollo-compatible {@code persistedQuery} request extension: a client's explicit signal that
  * it selected persisted-ID execution, and the shape a server reads that signal back from.
  *
- * <p>Both {@code izar-client} and {@code izar-server} depend on {@code izar-manifest} already, so
- * this is the one place that owns the extension's wire shape ({@code "persistedQuery"}, {@code
+ * <p>Both {@code izar-client} and a server that resolves persisted IDs depend on {@code
+ * izar-manifest} already, so this is the one place that owns the extension's wire shape ({@code "persistedQuery"}, {@code
  * version}, {@code sha256Hash}): a client and a server built from this module can never drift on
  * what those keys mean, the way two independent literal-string call sites could.
  *

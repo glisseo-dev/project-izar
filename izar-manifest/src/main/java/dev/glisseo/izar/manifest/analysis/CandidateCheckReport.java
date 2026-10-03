@@ -8,7 +8,7 @@ import java.util.List;
  * and candidate cross-referenced against baseline usage, and whether that usage analysis was
  * complete.
  *
- * <p>Carries no pass/fail verdict of its own. Per decision 22 of the phase 2 specification, a
+ * <p>Carries no pass/fail verdict of its own. A
  * caller applies a {@link CompatibilityPolicy} to this report to get one; the same report supports
  * more than one policy without being recomputed.
  *

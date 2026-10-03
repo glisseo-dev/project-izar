@@ -1,0 +1,14 @@
+query GetSkyCatalog {
+  constellations {
+    id
+    name
+    abbreviation
+    family
+    mythology
+    members {
+      id
+      name
+      magnitude
+    }
+  }
+}

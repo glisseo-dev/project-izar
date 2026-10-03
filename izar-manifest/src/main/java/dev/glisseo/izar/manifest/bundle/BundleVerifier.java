@@ -18,7 +18,7 @@ import java.util.Optional;
  * Verifies a {@link TransferBundle} directory entirely offline: every check reads only files
  * already inside {@code bundleDirectory}, never a network location or external account, so a
  * disconnected pipeline can run this the same way it runs {@link ReleaseAssembler} and {@link
- * CandidateChecker} (decision 14).
+ * CandidateChecker}.
  *
  * <p>Verification has two phases. The first reads {@code bundle.json}, the stored {@code
  * manifest.json}/{@code provenance.json}/{@code lock.json} triple, and every embedded release's
@@ -28,9 +28,8 @@ import java.util.Optional;
  * stored triple exactly. This mirrors {@link ReleaseAssembler#assemble}'s own two-phase shape:
  * resolve everything first, then only build the union once every input is trustworthy.
  *
- * <p>A bundle directory can carry files this verifier never reads, for example a future privacy
- * evidence or schema snapshot the phase 2 specification allows a bundle to optionally include
- * (decision 13). Their presence never makes a bundle invalid, and verifying a bundle never claims
+ * <p>A bundle directory can carry files this verifier never reads. Their presence never makes a
+ * bundle invalid, and verifying a bundle never claims
  * anything about them: only {@code bundle.json}, {@code selection.json}, and the files {@link
  * TransferBundle#writeTo} itself produces are part of what "verified" means here.
  */

@@ -1,0 +1,78 @@
+scalar DateTime
+scalar Date
+scalar BigDecimal
+
+type Query {
+  book: Book
+  books: [Book!]!
+  partialBook: Book
+  brokenBook: Book!
+  search: [SearchResult!]!
+}
+
+type Mutation {
+  createBook(input: BookInput!): Book
+  categorize(input: CategoryInput!): Boolean!
+  linkNodes(a: NodeAInput!, b: NodeBInput!): Boolean!
+}
+
+type Subscription {
+  bookChanged: Book!
+}
+
+type Book {
+  title: String!
+  pageCount: Int
+  author: Author
+  tags: [String]
+  genre: Genre!
+  publishedAt: DateTime
+  releaseDate: Date
+  price: BigDecimal
+}
+
+type Author {
+  name: String!
+}
+
+union SearchResult = Book | Movie
+
+type Movie {
+  title: String!
+  director: String!
+}
+
+enum Genre {
+  FICTION
+  NONFICTION
+}
+
+input BookInput {
+  title: String!
+  pageCount: Int
+  genre: Genre = FICTION
+  tags: [String]
+  coAuthors: [AuthorInput!]
+}
+
+input AuthorInput {
+  name: String!
+}
+
+# CategoryInput is directly self-referential through a nullable list of itself.
+# NodeAInput and NodeBInput are mutually recursive through a nullable 'partner' field on each
+# side, so a finite value is always constructible despite neither type being buildable alone.
+input CategoryInput {
+  name: String!
+  children: [CategoryInput!]
+}
+
+input NodeAInput {
+  label: String!
+  partner: NodeBInput
+}
+
+input NodeBInput {
+  label: String!
+  partner: NodeAInput
+}

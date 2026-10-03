@@ -5,15 +5,11 @@ import graphql.schema.GraphQLSchema;
 /**
  * A schema version becoming available for analysis: its name and parsed content.
  *
- * <p>This is a narrow, dependency-free seam, not a full event type of its own. izar-controller's
- * {@code schema} feature owns the actual {@code SchemaPublished} event and publishes it on every
- * successful upload; that event implements this interface instead of a module reacting to
- * publication (such as izar-classification) importing izar-controller's event type directly.
- * izar-manifest is a dependency both already share one-way (izar-controller depends on it for
- * schema analysis; izar-classification depends on it for the same graphql-java schema types this
- * package already works with). izar-controller depends on izar-classification, and
- * izar-classification depends on izar-manifest, so hosting the contract here keeps the module graph
- * acyclic. See ADR 0042 and ADR 0043.
+ * <p>This is a narrow, dependency-free seam, not a full event type of its own. The host
+ * application's {@code schema} feature owns the actual {@code SchemaPublished} event and publishes
+ * it on every successful upload; that event implements this interface so a module reacting to
+ * publication does not import the host application's event type directly. Both sides already
+ * depend on izar-manifest, so hosting the contract here keeps the module graph acyclic.
  *
  * <p>A Spring {@code @EventListener} typed to this interface still fires for any concrete event
  * implementing it, regardless of which module published it: Spring resolves listeners by the

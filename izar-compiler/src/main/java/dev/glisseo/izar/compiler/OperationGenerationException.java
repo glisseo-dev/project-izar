@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Thrown when a schema or operation file cannot be generated: invalid GraphQL, or a feature
- * outside this issue's supported subset. Carries every diagnostic found, not just the first, so
+ * outside the compiler's supported subset. Carries every diagnostic found, not just the first, so
  * one build reports every problem at once.
  */
 public final class OperationGenerationException extends RuntimeException {

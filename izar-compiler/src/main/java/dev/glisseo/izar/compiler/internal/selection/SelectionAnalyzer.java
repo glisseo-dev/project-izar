@@ -33,6 +33,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLUnionType;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -91,6 +92,9 @@ public final class SelectionAnalyzer {
      */
     private final Map<String, FragmentInterface> eligibleFragments;
 
+    /** Jackson needs a shared discriminator so its fallback subtype can retain an unknown typename. */
+    private final boolean jacksonResponseModels;
+
     /**
      * Every generated record for this operation ends up a sibling directly inside the operation
      * class, not lexically nested inside the record that selected it (simpler to render). So the
@@ -121,13 +125,15 @@ public final class SelectionAnalyzer {
             Map<String, FragmentDefinition> fragmentsByName,
             Set<String> usedTypeNames,
             ScalarMappingRegistry scalarMappings,
-            Map<String, FragmentInterface> eligibleFragments) {
+            Map<String, FragmentInterface> eligibleFragments,
+            boolean jacksonResponseModels) {
         this.schema = schema;
         this.operationFile = operationFile;
         this.fragmentsByName = fragmentsByName;
         this.usedTypeNames = usedTypeNames;
         this.scalarMappings = scalarMappings;
         this.eligibleFragments = eligibleFragments;
+        this.jacksonResponseModels = jacksonResponseModels;
     }
 
     public static Result analyze(
@@ -138,8 +144,34 @@ public final class SelectionAnalyzer {
             Set<String> usedTypeNames,
             ScalarMappingRegistry scalarMappings,
             Map<String, FragmentInterface> eligibleFragments) {
+        return analyze(
+                schema,
+                operationFile,
+                parsed,
+                rootType,
+                usedTypeNames,
+                scalarMappings,
+                eligibleFragments,
+                false);
+    }
+
+    public static Result analyze(
+            GraphQLSchema schema,
+            Path operationFile,
+            OperationParser.ParsedOperation parsed,
+            GraphQLObjectType rootType,
+            Set<String> usedTypeNames,
+            ScalarMappingRegistry scalarMappings,
+            Map<String, FragmentInterface> eligibleFragments,
+            boolean jacksonResponseModels) {
         SelectionAnalyzer analyzer = new SelectionAnalyzer(
-                schema, operationFile, parsed.fragmentsByName(), usedTypeNames, scalarMappings, eligibleFragments);
+                schema,
+                operationFile,
+                parsed.fragmentsByName(),
+                usedTypeNames,
+                scalarMappings,
+                eligibleFragments,
+                jacksonResponseModels);
         ObjectSelection root =
                 analyzer.analyzeObject(
                         "Data", rootType, wildcardSelections(parsed.definition().getSelectionSet().getSelections()));
@@ -174,15 +206,47 @@ public final class SelectionAnalyzer {
     }
 
     private List<FieldSelection> mergeOccurrences(GraphQLCompositeType type, List<Occurrence> occurrences) {
+        return mergeOccurrences(type, occurrences, null);
+    }
+
+    /**
+     * Same as {@link #mergeOccurrences(GraphQLCompositeType, List)}, but when {@code
+     * nestedFieldCache} is non-null, reuses a previously merged {@link FieldSelection} for a
+     * response key whose occurrence group is structurally identical (same {@link Occurrence}
+     * elements, by {@code equals}) to one already merged through this same cache, instead of
+     * re-merging it into a freshly named type. {@link #resolvePolymorphicFieldShape} passes one
+     * cache shared across a polymorphic field's shared fields and every branch, since a branch's
+     * {@code combined} occurrence list always contains the exact same shared-field occurrences as
+     * every other branch: without this, a shared field whose type is itself an object type (e.g.
+     * an interface field like {@code constellation: Constellation}) would otherwise be re-resolved
+     * once per branch, minting one redundant, identically-shaped Java type per branch (a
+     * {@code Constellation}, {@code Constellation2}, {@code Constellation3}, ... rather than one
+     * {@code Constellation} reused by every branch).
+     */
+    private List<FieldSelection> mergeOccurrences(
+            GraphQLCompositeType type,
+            List<Occurrence> occurrences,
+            @Nullable Map<List<Occurrence>, FieldSelection> nestedFieldCache) {
         Map<String, List<Occurrence>> byResponseName = new LinkedHashMap<>();
         for (Occurrence occurrence : occurrences) {
             byResponseName.computeIfAbsent(occurrence.responseName(), key -> new ArrayList<>()).add(occurrence);
         }
         List<FieldSelection> fields = new ArrayList<>();
         for (List<Occurrence> group : byResponseName.values()) {
-            fields.add(analyzeMergedField(type, group));
+            fields.add(nestedFieldCache == null ? analyzeMergedField(type, group) : cachedMergedField(type, group, nestedFieldCache));
         }
         return fields;
+    }
+
+    private FieldSelection cachedMergedField(
+            GraphQLCompositeType type, List<Occurrence> group, Map<List<Occurrence>, FieldSelection> nestedFieldCache) {
+        FieldSelection cached = nestedFieldCache.get(group);
+        if (cached != null) {
+            return cached;
+        }
+        FieldSelection resolved = analyzeMergedField(type, group);
+        nestedFieldCache.put(group, resolved);
+        return resolved;
     }
 
     /**
@@ -353,8 +417,8 @@ public final class SelectionAnalyzer {
     }
 
     /**
-     * An unaliased list element is named after its own schema type ({@code schemaTypeName}), per
-     * ADR 0037: the field name is typically plural there (e.g. {@code books: [Book!]!}) and
+     * An unaliased list element is named after its own schema type ({@code schemaTypeName}). The
+     * field name is typically plural (for example, {@code books: [Book!]!}) and
      * singularizing it back would need real English inflection this codebase deliberately avoids.
      * Every other field is named after its response name instead ({@code responseName}, which
      * equals {@code schemaFieldName} when the field carries no alias) so that two same-typed
@@ -402,8 +466,9 @@ public final class SelectionAnalyzer {
             List<Occurrence> group) {
         List<Selection<?>> mergedSelections = mergedNestedSelections(schemaFieldName, group);
 
-        PolymorphicOccurrences occurrences = new PolymorphicOccurrences(new ArrayList<>(), new LinkedHashMap<>());
-        collectPolymorphic(polymorphicType, null, mergedSelections, false, occurrences);
+        PolymorphicOccurrences occurrences =
+                new PolymorphicOccurrences(new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashSet<>(), new LinkedHashMap<>());
+        collectPolymorphic(polymorphicType, null, mergedSelections, false, false, occurrences);
 
         String polymorphicTypeName = JavaIdentifiers.uniqueTypeName(
                 usedTypeNames,
@@ -411,13 +476,17 @@ public final class SelectionAnalyzer {
 
         if (occurrences.branches().isEmpty()) {
             ObjectSelection sharedOnly = new ObjectSelection(
-                    polymorphicTypeName, List.copyOf(mergeOccurrences(polymorphicType, occurrences.shared())), List.of());
+                    polymorphicTypeName,
+                    List.copyOf(mergeOccurrences(polymorphicType, occurrences.shared())),
+                    List.copyOf(occurrences.sharedDirectFragments()));
             return new FieldShape.ObjectField(sharedOnly, nullable);
         }
 
-        List<FieldSelection> sharedFieldSelections = mergeOccurrences(polymorphicType, occurrences.shared());
+        Map<List<Occurrence>, FieldSelection> nestedFieldCache = new HashMap<>();
+        List<FieldSelection> sharedFieldSelections = mergeOccurrences(polymorphicType, occurrences.shared(), nestedFieldCache);
 
-        boolean needsInjection = !typenameAlreadyGuaranteed(occurrences);
+        boolean sharedTypename = containsBareUnconditionalTypename(occurrences.shared());
+        boolean needsInjection = jacksonResponseModels ? !sharedTypename : !typenameAlreadyGuaranteed(occurrences);
         String discriminatorKey = needsInjection ? freshDiscriminatorKey(allResponseKeys(occurrences)) : "__typename";
 
         List<PolymorphicBranch> branches = new ArrayList<>();
@@ -427,8 +496,13 @@ public final class SelectionAnalyzer {
             List<Occurrence> combined = new ArrayList<>(occurrences.shared());
             combined.addAll(entry.getValue());
             String branchTypeName = JavaIdentifiers.uniqueTypeName(usedTypeNames, polymorphicTypeName + concreteTypeName);
-            ObjectSelection branchSelection =
-                    new ObjectSelection(branchTypeName, List.copyOf(mergeOccurrences(concreteType, combined)), List.of());
+            Set<String> branchDirectFragments = new LinkedHashSet<>(occurrences.sharedDirectFragments());
+            branchDirectFragments.addAll(
+                    occurrences.branchDirectFragments().getOrDefault(concreteTypeName, Set.of()));
+            ObjectSelection branchSelection = new ObjectSelection(
+                    branchTypeName,
+                    List.copyOf(mergeOccurrences(concreteType, combined, nestedFieldCache)),
+                    List.copyOf(branchDirectFragments));
             branches.add(new PolymorphicBranch(concreteTypeName, branchSelection));
         }
 
@@ -437,26 +511,62 @@ public final class SelectionAnalyzer {
             unrecognizedFields.add(new FieldSelection(discriminatorKey, new FieldShape.ScalarField(BuiltinScalar.STRING, false)));
         }
         String unrecognizedTypeName = JavaIdentifiers.uniqueTypeName(usedTypeNames, polymorphicTypeName + "Unrecognized");
-        ObjectSelection unrecognizedBranch =
-                new ObjectSelection(unrecognizedTypeName, List.copyOf(unrecognizedFields), List.of());
+        ObjectSelection unrecognizedBranch = new ObjectSelection(
+                unrecognizedTypeName, List.copyOf(unrecognizedFields), List.copyOf(occurrences.sharedDirectFragments()));
 
         if (needsInjection) {
             discriminatorInjections.put(group.get(0).field().getSelectionSet(), discriminatorKey);
         }
 
-        PolymorphicSelection polymorphicSelection =
-                new PolymorphicSelection(polymorphicTypeName, List.copyOf(branches), unrecognizedBranch, discriminatorKey);
+        List<FieldSelection> hoistedSharedFields = hoistableSharedFields(sharedFieldSelections, branches);
+        PolymorphicSelection polymorphicSelection = new PolymorphicSelection(
+                polymorphicTypeName, List.copyOf(branches), unrecognizedBranch, discriminatorKey, hoistedSharedFields);
         return new FieldShape.PolymorphicField(polymorphicSelection, nullable);
+    }
+
+    /**
+     * The subset of {@code sharedFieldSelections} safe to declare as abstract accessors on the
+     * sealed interface: those every branch resolved to the exact same {@link FieldSelection}. A
+     * branch that re-selects a shared field with its own extra sub-selection (narrowing that
+     * field's generated type just for that branch) resolves it differently there, so it is left
+     * out and stays a branch-only accessor instead of a mismatched interface method.
+     */
+    private static List<FieldSelection> hoistableSharedFields(
+            List<FieldSelection> sharedFieldSelections, List<PolymorphicBranch> branches) {
+        List<FieldSelection> hoisted = new ArrayList<>();
+        for (FieldSelection shared : sharedFieldSelections) {
+            boolean sameInEveryBranch = branches.stream()
+                    .allMatch(branch -> shared.equals(fieldByResponseName(branch.selection(), shared.responseName())));
+            if (sameInEveryBranch) {
+                hoisted.add(shared);
+            }
+        }
+        return hoisted;
+    }
+
+    private static @Nullable FieldSelection fieldByResponseName(ObjectSelection selection, String responseName) {
+        return selection.fields().stream()
+                .filter(field -> field.responseName().equals(responseName))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
      * Occurrences collected while walking one polymorphic field's selections, split by whether
      * they apply regardless of concrete type ({@link #shared}) or only within one named concrete
-     * type's fragment ({@link #branches}, keyed by that type's schema name). Both collections are
+     * type's fragment ({@link #branches}, keyed by that type's schema name). {@link
+     * #sharedDirectFragments} and {@link #branchDirectFragments} track the same thing {@code
+     * directFragments} does for {@link #collect}, split the same way as {@link #shared}/{@link
+     * #branches}: the name of every {@link #eligibleFragments} member spread unconditionally at
+     * the shared level, or within one named concrete type's fragment. All four collections are
      * mutated in place by {@link #collectPolymorphic} as it walks; the record only bundles them so
-     * the walk's own methods take one parameter instead of two that always travel together.
+     * the walk's own methods take one parameter instead of four that always travel together.
      */
-    private record PolymorphicOccurrences(List<Occurrence> shared, Map<String, List<Occurrence>> branches) {}
+    private record PolymorphicOccurrences(
+            List<Occurrence> shared,
+            Map<String, List<Occurrence>> branches,
+            Set<String> sharedDirectFragments,
+            Map<String, Set<String>> branchDirectFragments) {}
 
     /**
      * Splits a polymorphic field's (possibly fragment-expanded) selections into shared occurrences
@@ -466,12 +576,21 @@ public final class SelectionAnalyzer {
      * type-conditioned fragment narrows to a concrete type; it never resets back to {@code null}
      * on the way down, since a field selected inside a concrete-type fragment stays specific to
      * that type regardless of further nesting.
+     *
+     * @param suppressed {@code true} once the walk has descended into an eligible fragment
+     *     spread's own definition body, so a further nested spread found there is not recorded as
+     *     a direct spread of the surrounding selection (mirrors the fresh, discarded set {@link
+     *     #collect} passes when it does the same); unlike {@code conditional}, this has no bearing
+     *     on {@link Occurrence#conditional()}, only on {@link
+     *     PolymorphicOccurrences#sharedDirectFragments()}/{@link
+     *     PolymorphicOccurrences#branchDirectFragments()} tracking
      */
     private void collectPolymorphic(
             GraphQLCompositeType polymorphicType,
             @Nullable String currentConcreteTypeName,
             List<Selection<?>> selections,
             boolean conditional,
+            boolean suppressed,
             PolymorphicOccurrences occurrences) {
         for (Selection<?> selection : selections) {
             if (selection instanceof Field field) {
@@ -489,18 +608,37 @@ public final class SelectionAnalyzer {
                         inline.getTypeCondition(),
                         wildcardSelections(inline.getSelectionSet().getSelections()),
                         conditional || isConditional(inline.getDirectives()),
+                        suppressed,
                         occurrences);
             } else if (selection instanceof FragmentSpread spread) {
                 FragmentDefinition definition = lookupFragment(spread.getName());
+                boolean nestedConditional = conditional || isConditional(spread.getDirectives());
+                if (!suppressed && !nestedConditional && eligibleFragments.containsKey(spread.getName())) {
+                    directFragmentsBucket(occurrences, currentConcreteTypeName).add(spread.getName());
+                }
                 collectPolymorphicNested(
                         polymorphicType,
                         currentConcreteTypeName,
                         definition.getTypeCondition(),
                         wildcardSelections(definition.getSelectionSet().getSelections()),
-                        conditional || isConditional(spread.getDirectives()),
+                        nestedConditional,
+                        true,
                         occurrences);
             }
         }
+    }
+
+    /**
+     * The direct-fragments collection a spread found under {@code currentConcreteTypeName} should
+     * be recorded into: {@link PolymorphicOccurrences#sharedDirectFragments()} while walking
+     * shared selections, or the {@link PolymorphicOccurrences#branchDirectFragments()} entry for
+     * that concrete type otherwise.
+     */
+    private static Set<String> directFragmentsBucket(
+            PolymorphicOccurrences occurrences, @Nullable String currentConcreteTypeName) {
+        return currentConcreteTypeName == null
+                ? occurrences.sharedDirectFragments()
+                : occurrences.branchDirectFragments().computeIfAbsent(currentConcreteTypeName, key -> new LinkedHashSet<>());
     }
 
     private void collectPolymorphicNested(
@@ -509,15 +647,16 @@ public final class SelectionAnalyzer {
             @Nullable TypeName typeCondition,
             List<Selection<?>> nestedSelections,
             boolean conditional,
+            boolean suppressed,
             PolymorphicOccurrences occurrences) {
         if (typeCondition == null || typeCondition.getName().equals(graphqlTypeName(polymorphicType))) {
-            collectPolymorphic(polymorphicType, currentConcreteTypeName, nestedSelections, conditional, occurrences);
+            collectPolymorphic(polymorphicType, currentConcreteTypeName, nestedSelections, conditional, suppressed, occurrences);
             return;
         }
         GraphQLType resolved = schema.getType(typeCondition.getName());
         if (resolved instanceof GraphQLObjectType objectType) {
             String concreteTypeName = currentConcreteTypeName != null ? currentConcreteTypeName : objectType.getName();
-            collectPolymorphic(polymorphicType, concreteTypeName, nestedSelections, conditional, occurrences);
+            collectPolymorphic(polymorphicType, concreteTypeName, nestedSelections, conditional, suppressed, occurrences);
             return;
         }
         throw error(
