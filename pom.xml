@@ -60,7 +60,7 @@
     <spring-shell.version>4.0.3</spring-shell.version>
     <tomcat.version>11.0.26</tomcat.version>
     <jackson-bom.version>3.1.7</jackson-bom.version>
-    <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+    <jackson-2-bom.version>2.22.3</jackson-2-bom.version>
 
     <!-- Maven plugin development, used by izar-maven-plugin. -->
     <maven-plugin-api.version>3.9.16</maven-plugin-api.version>
