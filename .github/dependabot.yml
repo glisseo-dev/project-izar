@@ -4,6 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # The Maven plugin targets the Maven 3.9 API that a 3.9 distribution bundles. Raising that
+      # baseline to 3.10 is a deliberate compatibility decision, not a routine bump. The build
+      # wrapper itself may move freely.
+      - dependency-name: "org.apache.maven:maven-plugin-api"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
   - package-ecosystem: "gradle"
     directory: "/izar-gradle-plugin"
     schedule:
