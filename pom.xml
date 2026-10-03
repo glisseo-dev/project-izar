@@ -3,12 +3,13 @@
 
   <groupId>dev.glisseo.izar</groupId>
   <artifactId>izar-parent</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <name>Izar</name>
   <description>GraphQL operations for Spring: operation-first Java generation, Spring client
     execution, manifest distribution, and server-side allowlisting.</description>
+  <url>https://github.com/glisseo-dev/project-izar</url>
   <organization>
     <name>Glisseo</name>
   </organization>
@@ -20,6 +21,18 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
+  <scm>
+    <connection>scm:git:https://github.com/glisseo-dev/project-izar.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/glisseo-dev/project-izar.git</developerConnection>
+    <url>https://github.com/glisseo-dev/project-izar</url>
+  </scm>
+  <developers>
+    <developer>
+      <id>glisseo-dev</id>
+      <name>Glisseo</name>
+      <url>https://github.com/glisseo-dev</url>
+    </developer>
+  </developers>
 
   <modules>
     <module>izar-operation</module>
@@ -31,6 +44,11 @@
   </modules>
 
   <properties>
+    <!-- Development version. A release overrides it from the tag with -Drevision=1.0.0-RC1, so
+         releasing commits no version change. flatten-maven-plugin writes the resolved value into
+         installed and deployed POMs. -->
+    <revision>0.1.0-SNAPSHOT</revision>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -41,6 +59,8 @@
     <spring-boot.version>4.1.1</spring-boot.version>
     <spring-shell.version>4.0.3</spring-shell.version>
     <tomcat.version>11.0.26</tomcat.version>
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+    <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
 
     <!-- Maven plugin development, used by izar-maven-plugin. -->
     <maven-plugin-api.version>3.9.16</maven-plugin-api.version>
@@ -57,6 +77,13 @@
     <maven-plugin-plugin.version>3.16.0</maven-plugin-plugin.version>
     <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
     <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
+    <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+
+    <!-- Release profile: what Maven Central requires. -->
+    <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+    <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+    <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
 
     <!-- Frontend build toolchain. Exact package versions live in the frontend lockfile. -->
     <node.version>v24.21.0</node.version>
@@ -87,6 +114,26 @@
         <groupId>org.apache.tomcat.embed</groupId>
         <artifactId>tomcat-embed-websocket</artifactId>
         <version>${tomcat.version}</version>
+      </dependency>
+
+      <!-- Spring Boot 4.1.1 still manages Jackson 3.1.5 and 2.21.5, which are affected by
+           advisories fixed in 3.1.7 and 2.21.7 (Dependabot alerts on jackson-core and
+           jackson-databind). Same mechanism as Tomcat above: BOM imports declared ahead of the
+           Boot import win. Drop them once spring-boot.version moves to a release that manages
+           Jackson >= 3.1.7 and 2.21.7. -->
+      <dependency>
+        <groupId>tools.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson-2-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <!-- The consuming Boot BOM owns managed framework versions: Spring Framework,
@@ -148,6 +195,33 @@
   </dependencies>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>${flatten-maven-plugin.version}</version>
+        <configuration>
+          <updatePomFile>true</updatePomFile>
+          <flattenMode>resolveCiFriendliesOnly</flattenMode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>flatten-clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -206,4 +280,79 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <!-- Maven Central release: ./mvnw -Prelease -Drevision=<version> deploy. Signs with the GPG key
+         from the environment and uploads one bundle for review in the Central Portal. -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${maven-source-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven-javadoc-plugin.version}</version>
+            <configuration>
+              <!-- Some {@link} targets resolve only in a full build, so doclint would fail the
+                   release on references that javac accepts. -->
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven-gpg-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>${central-publishing-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <!-- Review the validated deployment in the Portal, then publish it by hand. -->
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

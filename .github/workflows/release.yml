@@ -1,0 +1,100 @@
+name: Release
+
+# Run this from main after merging the rc/<version> pull request. It builds that commit, signs it,
+# uploads the modules to the Maven Central Portal, then tags the commit and creates the GitHub
+# release. The release notes are the body of the merged rc/<version> pull request, edits included.
+# The upload stays unpublished until you review and publish it in the Central Portal.
+# The version comes from the input, so a release commits no version change.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, such as 1.0.0 or 1.0.0-RC1. Must match the rc/<version> pull request
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Deploy to Maven Central and create the release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the version and branch
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Run this workflow from main." >&2
+            exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|M|RC)[0-9]+)?$ ]]; then
+            echo "Version $VERSION must look like 1.0.0 or 1.0.0-RC1." >&2
+            exit 1
+          fi
+
+      - name: Check out main
+        uses: actions/checkout@v7
+
+      - name: Refuse a version that already has a tag
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          git fetch --tags --quiet
+          if git rev-parse --verify --quiet "refs/tags/v$VERSION" > /dev/null; then
+            echo "Tag v$VERSION already exists. Central releases cannot be replaced." >&2
+            exit 1
+          fi
+
+      - name: Set up Java and signing
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Build, sign, and upload
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          VERSION: ${{ inputs.version }}
+        run: ./mvnw -B -Prelease "-Drevision=$VERSION" deploy
+
+      # The upload is the point of no return, so the tag and release come after it. A failed
+      # build leaves nothing behind to clean up.
+      - name: Tag the commit and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          FLAGS=()
+          if [[ "$VERSION" == *-* ]]; then
+            FLAGS+=(--prerelease)
+          fi
+          NOTES="$RUNNER_TEMP/notes.md"
+          gh pr list --state merged --head "rc/$VERSION" --json body --jq '.[0].body // ""' > "$NOTES"
+          if [[ -s "$NOTES" ]]; then
+            gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" \
+              --notes-file "$NOTES" "${FLAGS[@]}"
+          else
+            echo "No merged rc/$VERSION pull request found; generating notes from the commits."
+            gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" \
+              --generate-notes "${FLAGS[@]}"
+          fi

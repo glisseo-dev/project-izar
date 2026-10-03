@@ -1,5 +1,12 @@
 # Izar
 
+[![Build](https://github.com/glisseo-dev/project-izar/actions/workflows/build.yml/badge.svg)](https://github.com/glisseo-dev/project-izar/actions/workflows/build.yml)
+[![CodeQL](https://github.com/glisseo-dev/project-izar/actions/workflows/codeql.yml/badge.svg)](https://github.com/glisseo-dev/project-izar/actions/workflows/codeql.yml)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025e8c?logo=dependabot)](.github/dependabot.yml)
+[![License](https://img.shields.io/github/license/glisseo-dev/project-izar)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/glisseo-dev/project-izar/badge)](https://scorecard.dev/viewer/?uri=github.com/glisseo-dev/project-izar)
+[![Java 25](https://img.shields.io/badge/Java-25-orange)](#compatibility)
+
 Izar starts from the GraphQL operations you write. Each query, mutation, and
 subscription in a `.graphql` file becomes one immutable Java record, with
 builders for its variables and exactly the fields that operation selects. A

@@ -88,7 +88,10 @@ class ExecuteOperationsReactivelyIntegrationTest {
 
     @Test
     void aCallerComposedTimeoutTerminatesAnAbandonedOperation() {
-        StepVerifier.create(reactiveOperations.execute(new GetBookQuery()).timeout(Duration.ofNanos(1)))
+        StepVerifier.create(
+                        reactiveOperations.execute(new GetBookQuery())
+                                .delayElement(Duration.ofMillis(200))
+                                .timeout(Duration.ofMillis(20)))
                 .verifyError(java.util.concurrent.TimeoutException.class);
     }
 }

@@ -1,0 +1,4 @@
+name: Izar CodeQL config
+paths-ignore:
+  - examples
+  - integration-tests
