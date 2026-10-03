@@ -4,10 +4,11 @@ plugins {
 }
 
 group = "dev.glisseo.izar"
-version = "0.1.0-SNAPSHOT"
+// The release workflow passes -PizarVersion=<tag version>, the same value it gives Maven as
+// -Drevision, so a release commits no version change.
+val izarVersion = providers.gradleProperty("izarVersion").getOrElse("0.1.0-SNAPSHOT")
+version = izarVersion
 description = "The Gradle adapter over izar-compiler and izar-manifest."
-
-val izarVersion = "0.1.0-SNAPSHOT"
 
 repositories {
     // izar-compiler and izar-manifest come from `./mvnw install` at the repository root, the
