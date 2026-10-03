@@ -15,7 +15,17 @@ import java.util.Map;
  * An operation shared verbatim across several releases (see {@link OperationProvenance}) is
  * represented as one {@code OperationRef} per contributing release, so no association is lost.
  */
-public record OperationRef(String operationId, String operationName, String clientName, String manifestVersion) {
+public record OperationRef(String operationId, String operationName, String clientName, String manifestVersion)
+        implements Comparable<OperationRef> {
+
+    /** Orders by client name, then manifest version with digit runs compared numerically, then operation ID. */
+    @Override
+    public int compareTo(OperationRef other) {
+        int byClient = clientName.compareTo(other.clientName);
+        if (byClient != 0) return byClient;
+        int byVersion = VersionOrder.INSTANCE.compare(manifestVersion, other.manifestVersion);
+        return byVersion != 0 ? byVersion : operationId.compareTo(other.operationId);
+    }
 
     /**
      * Every {@link OperationRef} for {@code operation}'s contributing releases, looked up from

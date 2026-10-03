@@ -26,13 +26,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Exercises issue 36's complete workflow end to end, from the outside, the way an actual client
+ * Exercises the complete workflow end to end, from the outside, the way an actual client
  * build and an actual deployment build would: a fixture client release is deployed as a Maven
  * artifact through {@link DeployMojo} to a real (in-process, HTTP) Maven repository, then resolved
  * and assembled through {@link AssembleMojo} exactly as a separate deployment build would.
  *
  * <p>The repository requires HTTP Basic authentication, so this also exercises the credential path
- * the acceptance criteria call out: authentication is supplied to the ambient {@link
+ * authentication is supplied to the ambient {@link
  * org.eclipse.aether.RepositorySystemSession}/{@link RemoteRepository}, the same way a real Maven
  * run derives it from {@code settings.xml}, and neither {@link DeployMojo} nor {@link AssembleMojo}
  * ever sees, stores, or has any parameter capable of carrying a plaintext credential.

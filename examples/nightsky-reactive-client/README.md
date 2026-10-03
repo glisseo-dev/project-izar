@@ -12,16 +12,16 @@ consumer would, as installed artifacts with its own ordinary
 ## Running it
 
 From the repository root, install the Izar modules this project depends on,
-then start [`nightsky-server`](../nightsky-server) in one terminal:
+then start [`nightsky-default-sb-server`](../nightsky-default-sb-server) in one terminal:
 
 ```bash
 ./mvnw install
-./mvnw -f examples/nightsky-server/pom.xml spring-boot:run
+./mvnw -f examples/nightsky-default-sb-server/pom.xml spring-boot:run
 ```
 
 ```powershell
 .\mvnw.cmd install
-.\mvnw.cmd -f examples\nightsky-server\pom.xml spring-boot:run
+.\mvnw.cmd -f examples\nightsky-default-sb-server\pom.xml spring-boot:run
 ```
 
 Then, in a second terminal, run this client:
@@ -35,9 +35,20 @@ Then, in a second terminal, run this client:
 ```
 
 It watches for about 72 seconds, a bit more than one full compressed night
-cycle (see [`nightsky-server`](../nightsky-server)'s README), printing each
-subscription event and calling out what rose or set since the last event,
-then exits on its own. It sends the full GraphQL document.
+cycle (see [`nightsky-default-sb-server`](../nightsky-default-sb-server)'s README), printing each
+subscription event and calling out what rose or set since the last event. It
+sends the full GraphQL document. Unlike earlier versions of this example, the
+process then keeps running instead of exiting, serving the streaming endpoint
+below on `http://localhost:8082`. Stop it with Ctrl-C.
+
+## REST endpoint
+
+[`LiveSkyController`](src/main/java/dev/glisseo/izar/examples/nightsky/LiveSkyController.java)
+proxies the same `WatchVisibleSky` subscription as server-sent events:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /visible-sky/stream?locationId=` | Streams visible-sky snapshots for a viewing location as SSE. |
 
 ## Build and publish the manifest artifact
 

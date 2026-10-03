@@ -1,0 +1,10 @@
+target/
+build/
+.gradle/
+node_modules/
+.idea/
+*.iws
+out/
+.DS_Store
+Thumbs.db
+dependency-reduced-pom.xml

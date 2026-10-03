@@ -11,9 +11,7 @@ import java.util.Optional;
 /**
  * Installs a verified {@link TransferBundle} into a local install root as one atomic unit, so a
  * reader of {@code installRoot} never observes a mixture of files from two different revisions and
- * an interrupted or rejected install never disturbs the previously installed one (decision 11,
- * "multi-file bundles become visible as a verified unit, not a mixture of files from different
- * revisions").
+ * an interrupted or rejected install never disturbs the previously installed one.
  *
  * <p>{@link #install} always verifies through {@link BundleVerifier} first; nothing under {@code
  * installRoot} is touched at all if the bundle does not verify. A verified bundle's content is

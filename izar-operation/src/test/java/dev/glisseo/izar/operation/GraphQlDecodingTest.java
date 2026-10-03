@@ -79,6 +79,27 @@ class GraphQlDecodingTest {
             };
 
     @Test
+    void asIntAcceptsAnyWholeNumberThatFitsInThirtyTwoBits() {
+        assertThat(GraphQlDecoding.asInt(7)).isEqualTo(7);
+        assertThat(GraphQlDecoding.asInt(7L)).isEqualTo(7);
+        assertThat(GraphQlDecoding.asInt(7.0)).isEqualTo(7);
+    }
+
+    @Test
+    void asIntRejectsAFractionalValueInsteadOfTruncatingIt() {
+        assertThatThrownBy(() -> GraphQlDecoding.asInt(3.7))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Int");
+    }
+
+    @Test
+    void asIntRejectsAValueOutsideTheThirtyTwoBitRange() {
+        assertThatThrownBy(() -> GraphQlDecoding.asInt(Integer.MAX_VALUE + 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Int");
+    }
+
+    @Test
     void decodeScalarDelegatesToTheCodec() {
         assertThat(GraphQlDecoding.decodeScalar("abc", UPPERCASING_CODEC, "Custom")).isEqualTo("ABC");
     }

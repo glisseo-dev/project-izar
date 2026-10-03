@@ -32,7 +32,7 @@
     <!-- Candidate schema checks and release-scoped usage analysis validate operation documents and
          diff schemas with GraphQL Java's own parser, validator, and schema-diffing engine, never a
          hand-rolled equivalent. Version is inherited from the Spring Boot BOM, same as
-         izar-compiler's and izar-controller's direct dependency. -->
+         the same version every other Izar module uses. -->
     <dependency>
       <groupId>com.graphql-java</groupId>
       <artifactId>graphql-java</artifactId>

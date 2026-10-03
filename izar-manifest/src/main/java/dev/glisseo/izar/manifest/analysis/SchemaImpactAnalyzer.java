@@ -20,23 +20,23 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Classifies the structural diff between two schema versions — computed with GraphQL Java's own
- * {@link SchemaDiffing}, never hand-rolled SDL diffing — into breaking and non-breaking
+ * Classifies the structural diff between two schema versions, computed with GraphQL Java's own
+ * {@link SchemaDiffing}, never hand-rolled SDL diffing, into breaking and non-breaking
  * {@link ImpactReport.SchemaChange} entries, each cross-referenced against a {@link UsageIndex} of
  * the "from" schema.
  *
- * <p>An enum value or an input object field is never itself selected in an operation document
- * (see {@code docs/adr/0019-...}: only object/interface fields are), so a change to one is
- * attributed to whichever clients use the enclosing enum or input type at all — the finest
- * resolution the usage index can see — rather than a per-value or per-field usage it was never
- * built to track (see {@code docs/adr/0020-...}). Directive and applied-directive differences are
+ * <p>An enum value or an input object field is never itself selected in an operation document.
+ * A change to one is
+ * attributed to whichever clients use the enclosing enum or input type at all, the finest
+ * resolution the usage index can see, rather than a per-value or per-field usage it was never
+ * built to track. Directive and applied-directive differences are
  * schema-authoring concerns, not operation-facing ones, and are not reported here.
  *
  * <p>Object and interface fields are diffed with GraphQL Java's two independent, structurally
  * identical detail hierarchies ({@code SchemaDifference.Object*}/{@code Interface*} share no
  * common method-bearing type). {@link #toDetail} adapts each into the local {@link Detail} shape
- * so {@link #classifyFieldContainer} — the actual classification logic, including the
- * field-vs-argument usage distinction ADR 0020 explains — is written once and shared by both.
+ * so {@link #classifyFieldContainer} - the classification logic, including the distinction
+ * between field and argument usage - is written once and shared by both.
  */
 public final class SchemaImpactAnalyzer {
     private SchemaImpactAnalyzer() {}
@@ -143,18 +143,18 @@ public final class SchemaImpactAnalyzer {
 
     /**
      * Rewrites a {@link FieldRenamed} that shares its field with any other detail in the same
-     * modification — a type change, or an argument addition/removal/rename/type-change — into a
+     * modification, a type change, or an argument addition/removal/rename/type-change, into a
      * plain {@link FieldDeleted}(old name) plus {@link FieldAdded}(new name), dropping the other
      * entangled details for that field.
      *
      * <p>GraphQL Java's schema diffing pairs an old and a new field by overall graph structure, not
      * name or shape: it will call an old field "renamed" to a new one even when the new field's type
-     * is unrelated to the old one's (for example, moving a field to a differently named object —
-     * query namespacing — reports the old field as "renamed" to a new field that returns the new
+     * is unrelated to the old one's (for example, moving a field to a differently named object,
+     * query namespacing, reports the old field as "renamed" to a new field that returns the new
      * wrapper type). A rename is only a simple, safe-to-report-as-such edit when nothing else about
      * the field changed; once a type or argument also changed, describing it as one field that
-     * mutated in place is misleading, and (per issue 57/ADR 0031) relies on cross-referencing the
-     * diffing engine's inconsistent field-naming between detail kinds to even resolve. Reporting the
+     * mutated in place is misleading, and relying on cross-referencing the diffing engine's
+     * inconsistent field-naming between detail kinds can fail. Reporting the
      * old field as removed and the new field as added instead needs no such cross-referencing: each
      * side is classified independently, using only the schema it actually belongs to.
      *
@@ -200,10 +200,10 @@ public final class SchemaImpactAnalyzer {
      * The classification logic shared by object and interface types: field additions/removals/
      * renames/type-changes are attributed to whichever clients call the field at all
      * ({@link UsageIndex#forField}), but argument removals, renames, and type changes are
-     * attributed only to clients that actually supply that argument ({@link UsageIndex#forArgument}
-     * — finer than field-level usage, since a client can call a field without ever passing one of
+     * attributed only to clients that actually supply that argument ({@link UsageIndex#forArgument},
+     * finer than field-level usage, since a client can call a field without ever passing one of
      * its optional arguments). A newly added argument is deliberately the one exception: it uses
-     * field-level usage, because nobody could already "use" an argument that did not exist yet —
+     * field-level usage, because nobody could already "use" an argument that did not exist yet:
      * what matters there is who calls the field at all and will need to add it.
      */
     private static void classifyFieldContainer(String typeName, List<Detail> details, GraphQLFieldsContainer fromType,

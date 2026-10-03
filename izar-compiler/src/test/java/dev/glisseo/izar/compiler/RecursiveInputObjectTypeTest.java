@@ -20,7 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * Compiles generated mutations over a directly self-referential input type ({@code
  * CategoryInput}) and a mutually recursive pair ({@code NodeAInput}/{@code NodeBInput}) with
- * {@code javac}, then drives their builders through reflection: issue 31's acceptance criteria
+ * {@code javac}, then drives their builders through reflection. This verifies that
  * that a recursive input type generates a working Java model and builder, distinguishing
  * omitted, explicit-null, and explicit-value states for its own fields exactly like any other
  * generated input builder.

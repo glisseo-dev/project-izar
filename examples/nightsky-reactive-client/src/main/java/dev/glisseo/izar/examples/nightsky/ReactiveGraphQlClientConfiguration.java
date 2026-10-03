@@ -10,7 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * The explicit, application-owned client configuration: one Spring-configured, reactive {@link
- * GraphQlClient}, wrapped in Izar's {@link ReactiveGraphQlOperations} (issue 07). Izar never
+ * GraphQlClient}, wrapped in Izar's {@link ReactiveGraphQlOperations}. Izar never
  * constructs or owns the transport; this application does, the same way {@code
  * nightsky-sync-client}'s {@code GraphQlClientConfiguration} wires its synchronous counterpart.
  */

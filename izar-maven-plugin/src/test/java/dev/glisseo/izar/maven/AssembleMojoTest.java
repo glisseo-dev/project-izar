@@ -23,7 +23,7 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * Drives {@link AssembleMojo} against a real, local {@code file://} repository: fixture releases
  * are deployed into it first (exactly what a client build's {@link DeployMojo} run would leave
- * behind), then {@link AssembleMojo} resolves and assembles them, the same round trip issue 36's
+ * behind), then {@link AssembleMojo} resolves and assembles them, completing the round trip
  * external-consumer integration test exercises at the Maven-process level.
  */
 class AssembleMojoTest {

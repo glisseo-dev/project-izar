@@ -19,9 +19,7 @@ import java.util.stream.Collectors;
 
 /**
  * Checks an assembled supported-release selection's stored operations against a candidate schema
- * before deployment, per decisions 18 through 20 of the phase 2 specification: the
- * build-tool-independent seam Maven adapters and the standalone command both call, the same way
- * {@link ReleaseAssembler} and {@link ManifestPublisher} stay reusable across build integrations.
+ * before deployment. The checker does not depend on a build tool.
  *
  * <p>Combines two independent checks against {@link CandidateSchemas#candidate()}: GraphQL Java's
  * own {@link Validator} confirms every operation document still executes against it, and {@link

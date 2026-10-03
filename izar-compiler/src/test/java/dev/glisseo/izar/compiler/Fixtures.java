@@ -60,8 +60,8 @@ final class Fixtures {
             """;
 
     /**
-     * A schema with a mutation, an enum, and nested/list-shaped input objects: the surface issue
-     * 02's variable builders need to cover in one place. {@code BookInput.title} is required with
+     * A schema with a mutation, an enum, and nested/list-shaped input objects. {@code
+     * BookInput.title} is required with
      * no default, {@code pageCount} is optional with no default, {@code genre} is optional with a
      * schema default, {@code tags} is a nullable list of a nullable scalar, and {@code coAuthors}
      * is a nullable list of a non-null nested input object.
@@ -248,7 +248,7 @@ final class Fixtures {
             }
             """;
 
-    /** {@code genre} is a non-null output enum: the surface issue 05's enum evolution covers. */
+    /** {@code genre} is a non-null output enum. */
     static final String BOOK_SCHEMA_WITH_OUTPUT_ENUM =
             """
             type Query {
@@ -418,7 +418,7 @@ final class Fixtures {
      * mapped to {@code java.math.BigDecimal}), reached through a plain optional field ({@code
      * publishedAt}), a nullable list of a nullable scalar ({@code notableDates}), a nested output
      * object ({@code edition.releasedAt}), and a nested input object ({@code
-     * BookInput.edition.releasedAt}): the surface issue 06's acceptance criteria ask for.
+     * BookInput.edition.releasedAt}).
      */
     static final String BOOK_SCHEMA_WITH_SCALARS =
             """
@@ -484,7 +484,7 @@ final class Fixtures {
 
     /**
      * {@code CategoryInput} is directly self-referential through a nullable list of itself, the
-     * common tree-shaped case (category trees, comment threads) issue 31's acceptance criteria
+     * common tree-shaped case, such as category trees and comment threads,
      * ask for. {@code NodeAInput} and {@code NodeBInput} are mutually recursive through a
      * nullable {@code partner} field on each side, so a finite value is always constructible
      * despite neither type being buildable in isolation.
@@ -533,6 +533,66 @@ final class Fixtures {
             """
             mutation LinkNodes($a: NodeAInput!, $b: NodeBInput!) {
               linkNodes(a: $a, b: $b)
+            }
+            """;
+
+    /**
+     * {@code CelestialObject} is an interface with a shared field ({@code constellation}) whose
+     * own type is an object type, plus three implementors each with a type-specific field. Mirrors
+     * the {@code nightsky} example schema that first surfaced redundant per-branch nested types.
+     */
+    static final String CELESTIAL_OBJECT_SCHEMA =
+            """
+            type Query {
+              featured: CelestialObject
+            }
+
+            interface CelestialObject {
+              name: String!
+              constellation: Constellation!
+            }
+
+            type Constellation {
+              name: String!
+            }
+
+            type Star implements CelestialObject {
+              name: String!
+              constellation: Constellation!
+              spectralType: String!
+            }
+
+            type Nebula implements CelestialObject {
+              name: String!
+              constellation: Constellation!
+              nebulaType: String!
+            }
+
+            type Galaxy implements CelestialObject {
+              name: String!
+              constellation: Constellation!
+              distanceLightYears: Float!
+            }
+            """;
+
+    static final String GET_FEATURED_CELESTIAL_OBJECT_OPERATION =
+            """
+            query GetFeaturedCelestialObject {
+              featured {
+                name
+                constellation {
+                  name
+                }
+                ... on Star {
+                  spectralType
+                }
+                ... on Nebula {
+                  nebulaType
+                }
+                ... on Galaxy {
+                  distanceLightYears
+                }
+              }
             }
             """;
 }

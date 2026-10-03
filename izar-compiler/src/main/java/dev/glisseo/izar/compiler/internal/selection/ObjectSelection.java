@@ -10,7 +10,9 @@ import java.util.List;
  *     every direct selection and expanded fragment that contributes to this selection set
  * @param implementsFragments the simple names of every leaf-only {@link FragmentInterface} this
  *     selection set includes through a direct, unconditional spread (see {@link
- *     FragmentInterfaceAnalyzer}); empty for a polymorphic branch, since that tracking is not
- *     supported there yet
+ *     FragmentInterfaceAnalyzer}); for a polymorphic branch or its unrecognized catch-all, this
+ *     also includes a fragment spread unconditionally at the shared level of the polymorphic
+ *     field's selection, since those fields are merged into every branch (and the catch-all) the
+ *     same way
  */
 public record ObjectSelection(String javaTypeName, List<FieldSelection> fields, List<String> implementsFragments) {}

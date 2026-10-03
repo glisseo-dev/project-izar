@@ -1,6 +1,5 @@
 package dev.glisseo.izar.examples.nightsky;
 
-import dev.glisseo.izar.client.ReactiveGraphQlOperations;
 import dev.glisseo.izar.examples.nightsky.generated.GetViewingLocationsQuery;
 import dev.glisseo.izar.examples.nightsky.generated.WatchVisibleSkySubscription;
 import java.time.Duration;
@@ -15,27 +14,26 @@ import org.springframework.stereotype.Component;
 
 /**
  * Subscribes to {@code WatchVisibleSky} over HTTP SSE and prints the pushed sky snapshots from the
- * Nightsky server's compressed night cycle. The bounded demo watches for just over one full cycle.
+ * Nightsky server's compressed night cycle on startup. The bounded demo watches for just over one
+ * full cycle, then, with {@code spring-boot-starter-web} now on the classpath, the process stays up
+ * to serve {@link LiveSkyController}'s own streaming endpoint instead of exiting.
  */
 @Component
 class LiveSkyFeed implements CommandLineRunner {
 
     private static final Duration WATCH_DURATION = Duration.ofSeconds(72);
 
-    private final ReactiveGraphQlOperations operations;
+    private final NightskyGraphQlFacade facade;
 
     private Map<String, String> previouslyVisible = Map.of();
 
-    LiveSkyFeed(ReactiveGraphQlOperations operations) {
-        this.operations = operations;
+    LiveSkyFeed(NightskyGraphQlFacade facade) {
+        this.facade = facade;
     }
 
     @Override
     public void run(String... args) {
-        GetViewingLocationsQuery.ViewingLocation location = operations
-                .execute(new GetViewingLocationsQuery())
-                .map(result -> result.assertNoErrors().viewingLocations().getFirst())
-                .block();
+        GetViewingLocationsQuery.ViewingLocation location = facade.firstViewingLocation().block();
 
         System.out.printf(
                 Locale.ROOT,
@@ -44,10 +42,7 @@ class LiveSkyFeed implements CommandLineRunner {
                 location.name(),
                 WATCH_DURATION.toSeconds());
 
-        WatchVisibleSkySubscription subscription =
-                WatchVisibleSkySubscription.builder().locationId(location.id()).build();
-        operations.executeSubscription(subscription)
-                .map(result -> result.assertNoErrors().visibleSky())
+        facade.watchVisibleSky(location.id())
                 .doOnNext(this::printTick)
                 .take(WATCH_DURATION)
                 .blockLast();
@@ -56,7 +51,7 @@ class LiveSkyFeed implements CommandLineRunner {
     private void printTick(List<WatchVisibleSkySubscription.CelestialObject> visible) {
         Map<String, String> namesById = new LinkedHashMap<>();
         for (WatchVisibleSkySubscription.CelestialObject object : visible) {
-            namesById.put(idOf(object), nameOf(object));
+            namesById.put(object.id(), object.name());
         }
 
         Set<String> rose = new HashSet<>(namesById.keySet());
@@ -69,23 +64,5 @@ class LiveSkyFeed implements CommandLineRunner {
         System.out.println("  visible now: " + String.join(", ", namesById.values()));
 
         previouslyVisible = Map.copyOf(namesById);
-    }
-
-    private static String idOf(WatchVisibleSkySubscription.CelestialObject object) {
-        return switch (object) {
-            case WatchVisibleSkySubscription.CelestialObjectStar star -> star.id();
-            case WatchVisibleSkySubscription.CelestialObjectNebula nebula -> nebula.id();
-            case WatchVisibleSkySubscription.CelestialObjectGalaxy galaxy -> galaxy.id();
-            case WatchVisibleSkySubscription.CelestialObjectUnrecognized unrecognized -> unrecognized.id();
-        };
-    }
-
-    private static String nameOf(WatchVisibleSkySubscription.CelestialObject object) {
-        return switch (object) {
-            case WatchVisibleSkySubscription.CelestialObjectStar star -> star.name();
-            case WatchVisibleSkySubscription.CelestialObjectNebula nebula -> nebula.name();
-            case WatchVisibleSkySubscription.CelestialObjectGalaxy galaxy -> galaxy.name();
-            case WatchVisibleSkySubscription.CelestialObjectUnrecognized unrecognized -> unrecognized.name();
-        };
     }
 }

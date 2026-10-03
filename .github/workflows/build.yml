@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build and test every module
+        run: ./mvnw -B verify
+
+      - name: Install the modules for the consumer projects
+        run: ./mvnw -B install -DskipTests
+
+      - name: Build and test the Gradle plugin
+        run: ./gradlew --no-daemon --console=plain build
+        working-directory: izar-gradle-plugin
+
+      - name: Build the Gradle example
+        run: |
+          ./izar-gradle-plugin/gradlew --no-daemon --console=plain -p izar-gradle-plugin publishToMavenLocal
+          ./examples/nightsky-gradle-client/gradlew --no-daemon --console=plain -p examples/nightsky-gradle-client build
+
+      - name: Run the consumer integration tests
+        run: ./mvnw -B -f integration-tests/bookstore-consumer/pom.xml verify
+
+      - name: Build the examples
+        run: |
+          for example in nightsky-default-sb-server nightsky-sync-client nightsky-reactive-client nightsky-jackson-client; do
+            ./mvnw -B -f "examples/$example/pom.xml" package -DskipTests
+          done

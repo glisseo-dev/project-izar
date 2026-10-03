@@ -1,5 +1,6 @@
 package dev.glisseo.izar.operation;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,8 +43,16 @@ public final class GraphQlDecoding {
 
     /** Decodes a GraphQL {@code Int} value. */
     public static Integer asInt(@Nullable Object value) {
+        if (value instanceof Integer integer) {
+            return integer;
+        }
         if (value instanceof Number number) {
-            return number.intValue();
+            try {
+                return new BigDecimal(number.toString()).intValueExact();
+            } catch (ArithmeticException | NumberFormatException e) {
+                throw new IllegalArgumentException(
+                        "Expected a GraphQL Int value that fits in 32 bits, got " + describe(value), e);
+            }
         }
         throw new IllegalArgumentException("Expected a GraphQL Int value, got " + describe(value));
     }

@@ -68,7 +68,7 @@ public final class SynchronousGraphQlOperations {
      * otherwise have to agree by hand.
      *
      * @param restClient scoped to the target endpoint's URL, as {@link GraphQlExecutionMode#FULL_DOCUMENT}
-     *     mode would use (see ADR 0010); carries whatever auth, headers, or interceptors the
+     *     mode would use; carries whatever auth, headers, or interceptors the
      *     application needs
      */
     public static SynchronousGraphQlOperations persistedQuery(RestClient restClient) {

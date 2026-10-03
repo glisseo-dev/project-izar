@@ -19,9 +19,9 @@
   <version>0.1.0-SNAPSHOT</version>
 
   <name>Izar example :: Nightsky reactive client</name>
-  <description>Issue 20: a runnable console client that polls the Nightsky server's compressed
+  <description>A runnable console client that polls the Nightsky server's compressed
     night cycle every few seconds and prints the sky rotating live, through Izar's reactive
-    ReactiveGraphQlOperations adapter (issue 07).</description>
+    ReactiveGraphQlOperations adapter.</description>
 
   <properties>
     <java.version>25</java.version>
@@ -42,11 +42,11 @@
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter</artifactId>
+      <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
-    <!-- issue 07's reactive adapter builds an HttpGraphQlClient, which needs WebClient. No
+    <!-- The reactive adapter builds an HttpGraphQlClient, which needs WebClient. No
          reactor-netty dependency is added alongside it, so WebClient falls back to spring-web's
-         JdkClientHttpConnector, matching integration-tests/one-query-consumer's own reactive
+         JdkClientHttpConnector, matching integration-tests/bookstore-consumer's own reactive
          client wiring. reactor-core itself comes transitively through izar-client. -->
     <dependency>
       <groupId>org.springframework</groupId>

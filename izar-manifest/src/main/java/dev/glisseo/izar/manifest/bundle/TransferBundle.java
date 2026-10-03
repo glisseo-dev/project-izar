@@ -15,8 +15,8 @@ import tools.jackson.databind.json.JsonMapper;
  * A self-contained transfer bundle: an assembled selection's own {@link AssembledManifest}
  * (manifest, provenance, and lock) plus every contributing release's original manifest, verbatim,
  * so a deployment engineer can move a complete, reviewed result between isolated environments and
- * verify it offline before installing it. Per decision 13 of the phase 2 specification, this is
- * "the metadata needed to reproduce the result," not a second copy of the union logic: {@link
+ * verify it offline before installing it. It carries the inputs needed to reproduce the result,
+ * not a second copy of the union logic: {@link
  * BundleVerifier} reproduces the assembled result from the embedded originals through the ordinary
  * {@link ReleaseAssembler}, then compares it against what is stored here.
  *
@@ -25,11 +25,10 @@ import tools.jackson.databind.json.JsonMapper;
  * this build's shapes. {@code releases} carries one entry per {@link InputLock#releases()} entry in
  * {@code assembled.lock()}, in the same order.
  *
- * <p>A bundle is a directory of files, not a single archive (decision 11): {@link #writeTo} and
+ * <p>A bundle is a directory of files, not a single archive: {@link #writeTo} and
  * {@link BundleVerifier#verify} both read and write plain files at fixed relative paths, so an
  * ordinary file copy, {@code rsync}, or artifact-repository upload mirrors a bundle without special
- * tooling and without changing what it verifies against (decision 13's "mirrored ... without
- * changing their identity").
+ * tooling without changing the files' identity.
  *
  * @param descriptor this bundle's format header
  * @param assembled the assembled manifest, provenance, and input lock this bundle packages

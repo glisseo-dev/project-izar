@@ -14,7 +14,7 @@
   <name>Izar :: Compiler</name>
   <description>Build-time generation of Java models, operation metadata, and executable
     documents from a supplied schema and unchanged GraphQL operation files. Independent of
-    any build tool, so a later Gradle adapter can reuse it.</description>
+    any build tool.</description>
 
   <dependencies>
     <dependency>

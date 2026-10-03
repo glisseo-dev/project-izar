@@ -1,6 +1,6 @@
 # Izar scalars
 
-Izar scalars is an optional library of pre-built `ScalarCodec` implementations for the custom scalars GraphQL Java Extended Scalars typically supplies on the server: `DateTime`, `Date`, and `BigDecimal`. Reach for it when a schema uses one of these three scalars, instead of writing a codec by hand for a mapping this library already covers.
+Izar scalars provides ready-made `ScalarCodec` implementations for three custom scalars that GraphQL Java Extended Scalars commonly supplies on the server: `DateTime`, `Date`, and `BigDecimal`. Add it when your schema uses one of them, so you don't write the codec yourself.
 
 ## Add the dependency
 
@@ -12,9 +12,9 @@ Izar scalars is an optional library of pre-built `ScalarCodec` implementations f
 </dependency>
 ```
 
-It brings in [izar-operation](../izar-operation/) transitively; nothing else.
+Its only dependency is [izar-operation](../izar-operation/).
 
-## The three codecs
+## Codecs
 
 | GraphQL scalar | Java type | Codec class |
 | --- | --- | --- |
@@ -22,15 +22,13 @@ It brings in [izar-operation](../izar-operation/) transitively; nothing else.
 | `Date` | `java.time.LocalDate` | `LocalDateScalarCodec` |
 | `BigDecimal` | `java.math.BigDecimal` | `BigDecimalScalarCodec` |
 
-`InstantScalarCodec` and `LocalDateScalarCodec` both round-trip through the ISO-8601 string each type's own `parse`/`toString` already produces, and throw `IllegalArgumentException` naming the offending value when the wire value isn't a string or doesn't parse.
+`InstantScalarCodec` and `LocalDateScalarCodec` convert through the ISO-8601 string that each type's `parse` and `toString` produce. They throw `IllegalArgumentException` with the offending value when the wire value isn't a string or doesn't parse.
 
-`BigDecimalScalarCodec` decodes a `BigDecimal`, `String`, or `Number` value into a `BigDecimal`. It reads a `Number` through `toString()` rather than `doubleValue()`, so a value the JSON parser already produced as a `Double` or `Long` doesn't lose precision before the codec sees it. It encodes with `toPlainString()`, never scientific notation.
+`BigDecimalScalarCodec` decodes a `BigDecimal`, `String`, or `Number` into a `BigDecimal`. It reads a `Number` through `toString()` instead of `doubleValue()`, so a `Double` or `Long` that the JSON parser already produced keeps its precision. It encodes with `toPlainString()`, which never uses scientific notation.
 
-All three Java types are immutable, so none of these codecs defensively copies on the way in or out.
+## Map a scalar to a codec
 
-## Configuring a mapping
-
-Nothing here applies until an application names a mapping in [izar-maven-plugin](../izar-maven-plugin/)'s `<scalarMappings>`, pairing the GraphQL scalar name, the fully qualified Java type, and a codec class:
+A codec takes effect once you name it in the plugin's scalar mappings. Each mapping pairs the GraphQL scalar name, the fully qualified Java type, and the codec class. This example uses the Maven plugin's `<scalarMappings>`:
 
 ```xml
 <configuration>
@@ -45,16 +43,10 @@ Nothing here applies until an application names a mapping in [izar-maven-plugin]
 </configuration>
 ```
 
-Add one `<scalarMapping>` per custom scalar an operation's selections or variables reach. `javaTypeName` must be fully qualified; generated code adds no import for it.
+Add one `<scalarMapping>` for each custom scalar that an operation's selections or variables reach. `javaTypeName` must be fully qualified, because generated code adds no import for it. For the Gradle syntax, see [izar-gradle-plugin](../izar-gradle-plugin/#map-custom-scalars). An operation that reaches a custom scalar with no mapping fails generation and names the scalar.
 
-## Writing your own codec instead
+## Write your own codec
 
-A scalar with no mapping shipped here, a domain-specific one, needs its own class implementing `dev.glisseo.izar.operation.ScalarCodec<T>` with a public no-argument constructor. See [izar-operation](../izar-operation/) for the interface and a worked example. That codec carries no dependency on izar-scalars at all; the two libraries are unrelated implementations of the same interface.
+For any other scalar, implement `dev.glisseo.izar.operation.ScalarCodec<T>` in a class with a public no-argument constructor. [izar-operation](../izar-operation/) documents the interface with an example. Your codec doesn't need izar-scalars. GraphQL Java Extended Scalars defines more scalars, such as `Time`, `UUID`, and `Long`, and each of them needs a codec you supply.
 
-## What this module does not do
-
-- Nothing here is applied automatically. Depending on izar-scalars without naming a `<scalarMapping>` for a given scalar has no effect.
-- It does not change generation behavior for scalars it doesn't cover: an unmapped custom scalar still fails generation, naming the scalar and what to configure.
-- It ships no codec beyond the three above. GraphQL Java Extended Scalars defines more (`Time`, `UUID`, `Long`, and others); a schema using one of those still needs an application-supplied codec until a mapping for it is added here.
-
-See the [root README](../README.md) for how this module fits into the rest of Izar.
+See the [root README](../README.md) for the other Izar modules.

@@ -13,16 +13,16 @@ consumer would, as installed artifacts with its own ordinary
 ## Running it
 
 From the repository root, install the Izar modules this project depends on,
-then start [`nightsky-server`](../nightsky-server) in one terminal:
+then start [`nightsky-default-sb-server`](../nightsky-default-sb-server) in one terminal:
 
 ```bash
 ./mvnw install
-./mvnw -f examples/nightsky-server/pom.xml spring-boot:run
+./mvnw -f examples/nightsky-default-sb-server/pom.xml spring-boot:run
 ```
 
 ```powershell
 .\mvnw.cmd install
-.\mvnw.cmd -f examples\nightsky-server\pom.xml spring-boot:run
+.\mvnw.cmd -f examples\nightsky-default-sb-server\pom.xml spring-boot:run
 ```
 
 Then, in a second terminal, run this client:
@@ -38,7 +38,23 @@ Then, in a second terminal, run this client:
 It prints the full constellation catalog, what's currently visible from a
 fixed viewing location, logs a sample observation against whatever is first
 in that list, then reads the observation log back. It receives three
-`WatchVisibleSky` subscription events by persisted ID, then exits.
+`WatchVisibleSky` subscription events by persisted ID. Unlike earlier
+versions of this example, the process then keeps running instead of exiting,
+serving the REST endpoints below on `http://localhost:8081`. Stop it with
+Ctrl-C.
+
+## REST endpoints
+
+[`SkyExplorerController`](src/main/java/dev/glisseo/izar/examples/nightsky/SkyExplorerController.java)
+wraps the same [`NightskyGraphQlFacade`](src/main/java/dev/glisseo/izar/examples/nightsky/NightskyGraphQlFacade.java)
+calls the startup story already makes, as plain JSON:
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /catalog` | The full constellation catalog. |
+| `GET /visible-now?locationId=` | What's currently visible from a viewing location. |
+| `POST /observations` | Log an observation: `{"locationId", "objectId", "conditions", "notes"}`. |
+| `GET /observations?locationId=` | The observation log for a viewing location. |
 
 ## Build and publish the manifest artifact
 

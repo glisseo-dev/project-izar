@@ -19,7 +19,7 @@
   <version>0.1.0-SNAPSHOT</version>
 
   <name>Izar example :: Nightsky sync client</name>
-  <description>Issue 20: a runnable console client that browses the Nightsky catalog, checks
+  <description>A runnable console client that browses the Nightsky catalog, checks
     what's visible right now, and logs an observation, through Izar's synchronous
     SynchronousGraphQlOperations adapter.</description>
 
@@ -50,7 +50,7 @@
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter</artifactId>
+      <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>

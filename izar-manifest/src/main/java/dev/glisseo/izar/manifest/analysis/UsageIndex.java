@@ -27,7 +27,6 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeUtil;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,8 +41,8 @@ import org.jspecify.annotations.Nullable;
  * argument of one schema, computed by walking every distinct operation document once with GraphQL
  * Java's own type-info traversal ({@link QueryTraverser}), never a hand-rolled selection-set
  * walker. Shared by the schema feature's coverage and impact operations so both report
- * the same notion of "used" described in
- * {@code docs/adr/0019-schema-coverage-attributes-a-type-through-its-fields-return-types-and-argument-types.md}.
+ * the same notion of "used": an operation uses a type when it returns that type or supplies it as
+ * an argument type, and uses a field when it selects it.
  *
  * <p>{@code manifest} is the release-scoped union exposed by {@code ReleaseOperations} already
  * deduplicated by operation ID; {@code provenance} names every contributing release for each one
@@ -53,8 +52,8 @@ import org.jspecify.annotations.Nullable;
  * {@link OperationRef} in the result still names the exact release it came from. {@code operationRefs}
  * retains all active operations, including documents that have no non-introspection field usage.
  *
- * <p>{@code inputFieldUsage} is {@code fieldUsage}'s counterpart for input object types (issue
- * 82): which contributing releases supply a value reaching each classifiable input object leaf
+ * <p>{@code inputFieldUsage} is {@code fieldUsage}'s counterpart for input object types: it records
+ * which contributing releases supply a value reaching each classifiable input object leaf
  * field, resolved by walking each supplied argument's AST value rather than only recording that an
  * argument was supplied by name. A variable's declared input type contributes every field that
  * type can carry, since a stored document's structure alone never reveals which optional fields a
@@ -129,7 +128,7 @@ public record UsageIndex(
 
     /**
      * Which contributing releases' stored operations actually supply this specific argument by name
-     * (ADR 0019, rule 3) — finer than {@link #forField}, which only tells you a release calls the
+     * This is finer than {@link #forField}, which only tells you a release calls the
      * field at all. A newly added argument necessarily has no usage here yet (nobody could have
      * supplied an argument that did not exist), so callers classifying an argument addition should
      * use {@link #forField} instead: "affected" there means "will need to add this argument," not
@@ -152,11 +151,7 @@ public record UsageIndex(
     }
 
     private static List<OperationRef> sorted(Set<OperationRef> usage) {
-        return usage.stream()
-                .sorted(Comparator.comparing(OperationRef::clientName)
-                        .thenComparing(OperationRef::manifestVersion)
-                        .thenComparing(OperationRef::operationId))
-                .toList();
+        return usage.stream().sorted().toList();
     }
 
     /**
@@ -165,8 +160,8 @@ public record UsageIndex(
      * (both the argument's own name and the type of the value it supplies) to every release in
      * {@code refs}. A document that no longer parses, cannot be prepared for traversal, or no longer
      * matches {@code schema} (a stale client's operation against a newer or older schema) still
-     * contributes whatever usage it recorded before the failure — never less than before this
-     * change — but is now also recorded in {@code incomplete}, so a caller cannot mistake the
+     * contributes whatever usage it recorded before the failure, never less than before this
+     * change, but is now also recorded in {@code incomplete}, so a caller cannot mistake the
      * resulting zero or partial usage for a confirmed absence of dependency.
      */
     private static void visit(GraphQLSchema schema, ManifestOperation operation, List<OperationRef> refs,

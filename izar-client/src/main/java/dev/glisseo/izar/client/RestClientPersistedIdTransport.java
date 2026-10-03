@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
  *
  * <p>{@code restClient} is expected to already be scoped to the same endpoint URL {@code
  * FULL_DOCUMENT} mode uses: a compatible server resolves this shape's document server-side on its
- * standard endpoint, so no separate URL is needed (see ADR 0010).
+ * standard endpoint, so no separate URL is needed.
  */
 final class RestClientPersistedIdTransport implements GraphQlTransport {
 

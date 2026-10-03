@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ClientReleaseTest {
 
@@ -27,6 +29,24 @@ class ClientReleaseTest {
         assertThatThrownBy(() -> new ClientRelease(" ", "1.2.0"))
                 .isInstanceOf(AssemblyException.class)
                 .hasMessageContaining("clientName");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"..", ".", "../x", "a/b", "a\\b", "c:d"})
+    void rejectsAClientNameThatIsNotASafePathSegment(String clientName) {
+        assertThatThrownBy(() -> new ClientRelease(clientName, "1.2.0"))
+                .isInstanceOf(AssemblyException.class)
+                .hasMessageContaining("clientName")
+                .hasMessageContaining("path segment");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"..", ".", "../x", "a/b", "a\\b", "c:d"})
+    void rejectsAManifestVersionThatIsNotASafePathSegment(String manifestVersion) {
+        assertThatThrownBy(() -> new ClientRelease("web-app", manifestVersion))
+                .isInstanceOf(AssemblyException.class)
+                .hasMessageContaining("manifestVersion")
+                .hasMessageContaining("path segment");
     }
 
     @Test

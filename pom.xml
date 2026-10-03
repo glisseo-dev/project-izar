@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.glisseo.izar</groupId>
+  <artifactId>izar-parent</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Izar</name>
+  <description>GraphQL operations for Spring: operation-first Java generation, Spring client
+    execution, manifest distribution, and server-side allowlisting.</description>
+  <organization>
+    <name>Glisseo</name>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <modules>
+    <module>izar-operation</module>
+    <module>izar-compiler</module>
+    <module>izar-maven-plugin</module>
+    <module>izar-client</module>
+    <module>izar-scalars</module>
+    <module>izar-manifest</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Baseline from docs/technology-baseline.md, verified 2026-09-15. -->
+    <java.version>25</java.version>
+    <maven.compiler.release>${java.version}</maven.compiler.release>
+    <maven.version>3.9.16</maven.version>
+    <spring-boot.version>4.1.1</spring-boot.version>
+    <spring-shell.version>4.0.3</spring-shell.version>
+    <tomcat.version>11.0.26</tomcat.version>
+
+    <!-- Maven plugin development, used by izar-maven-plugin. -->
+    <maven-plugin-api.version>3.9.16</maven-plugin-api.version>
+    <maven-plugin-annotations.version>3.16.0</maven-plugin-annotations.version>
+    <!-- The exact resolver version this project's ${maven.version} distribution bundles, so
+         izar-maven-plugin's compile-time API matches what a real Maven run injects. -->
+    <maven-resolver.version>1.9.27</maven-resolver.version>
+
+    <!-- Build plugins, pinned for reproducibility. -->
+    <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
+    <maven-failsafe-plugin.version>3.6.0</maven-failsafe-plugin.version>
+    <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+    <maven-plugin-plugin.version>3.16.0</maven-plugin-plugin.version>
+    <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+    <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
+
+    <!-- Frontend build toolchain. Exact package versions live in the frontend lockfile. -->
+    <node.version>v24.21.0</node.version>
+    <npm.version>11.19.0</npm.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Spring Boot 4.1.1 (the latest GA; nothing newer fixes this yet) still manages
+           Tomcat 11.0.24, which is affected by CVE-2026-68525, CVE-2026-65905, and
+           CVE-2026-65182 (GHSA dependabot alerts 5-10). spring-boot-dependencies is
+           imported via <scope>import</scope> rather than inherited as a <parent>, so
+           overriding ${tomcat.version} alone does not reach placeholders already resolved
+           inside that imported BOM; these entries, declared ahead of the import below, are
+           the documented workaround. Drop them once spring-boot.version moves to a release
+           that manages Tomcat >= 11.0.25. -->
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>${tomcat.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-el</artifactId>
+        <version>${tomcat.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-websocket</artifactId>
+        <version>${tomcat.version}</version>
+      </dependency>
+
+      <!-- The consuming Boot BOM owns managed framework versions: Spring Framework,
+           Spring for GraphQL, GraphQL Java, Jackson, Reactor, JSpecify, JUnit, AssertJ.
+           Izar does not force independently selected versions on top of it. -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-operation</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-compiler</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-scalars</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.glisseo.izar</groupId>
+        <artifactId>izar-manifest</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Every module states its nullability contract with JSpecify. -->
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <compilerArgs>
+              <arg>-Xlint:all,-serial,-processing</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven-failsafe-plugin.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>${maven-shade-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-plugin-plugin</artifactId>
+          <version>${maven-plugin-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.eirslett</groupId>
+          <artifactId>frontend-maven-plugin</artifactId>
+          <version>${frontend-maven-plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

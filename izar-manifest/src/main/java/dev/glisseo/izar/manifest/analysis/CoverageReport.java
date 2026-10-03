@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
  * @param selectionRevision the release-selection revision (the exact set of currently
  *     registered client releases) this report was computed against, or {@code null} if no schema
  *     has been uploaded yet
+ * @param scope which registered releases the report counted
  * @param complete {@code true} if every registered operation's document was fully analyzed;
  *     {@code false} if {@code incomplete} names at least one that was not, in which case a
  *     zero-{@code usedByCount} finding elsewhere in this report is not a reliable no-dependency claim
@@ -22,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 public record CoverageReport(
         @Nullable String schemaRevision,
         @Nullable String selectionRevision,
+        ReleaseScope scope,
         int totalTypes,
         int usedTypes,
         int totalFields,
@@ -30,8 +32,8 @@ public record CoverageReport(
         List<IncompleteOperation> incomplete,
         List<TypeCoverage> types) {
 
-    public static CoverageReport empty() {
-        return new CoverageReport(null, null, 0, 0, 0, 0, true, List.of(), List.of());
+    public static CoverageReport empty(ReleaseScope scope) {
+        return new CoverageReport(null, null, scope, 0, 0, 0, 0, true, List.of(), List.of());
     }
 
     public record TypeCoverage(String name, Kind kind, int usedByCount, List<OperationRef> usedBy, List<FieldCoverage> fields) {}
