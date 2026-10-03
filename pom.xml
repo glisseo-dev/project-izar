@@ -63,7 +63,7 @@
     <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
 
     <!-- Maven plugin development, used by izar-maven-plugin. -->
-    <maven-plugin-api.version>3.9.16</maven-plugin-api.version>
+    <maven-plugin-api.version>3.10.0</maven-plugin-api.version>
     <maven-plugin-annotations.version>3.16.0</maven-plugin-annotations.version>
     <!-- The exact resolver version this project's ${maven.version} distribution bundles, so
          izar-maven-plugin's compile-time API matches what a real Maven run injects. -->
