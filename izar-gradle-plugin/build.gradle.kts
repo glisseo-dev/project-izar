@@ -25,7 +25,7 @@ java {
 dependencies {
     implementation("dev.glisseo.izar:izar-compiler:$izarVersion")
     implementation("dev.glisseo.izar:izar-manifest:$izarVersion")
-    compileOnly("org.jspecify:jspecify:1.0.0")
+    compileOnly("org.jspecify:jspecify:1.0.1")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
