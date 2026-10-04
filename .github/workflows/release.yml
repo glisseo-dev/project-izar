@@ -1,10 +1,13 @@
 name: Release
 
-# Run this from main after merging the rc/<version> pull request. It builds that commit, signs it,
-# uploads the modules to the Maven Central Portal, then tags the commit and creates the GitHub
-# release. The release notes are the body of the merged rc/<version> pull request, edits included.
+# Run this from main after merging the rc/<version> pull request. It tags the commit, builds it,
+# signs it, uploads the modules to the Maven Central Portal, then creates the GitHub release. The
+# release notes are the body of the merged rc/<version> pull request, edits included.
 # The upload stays unpublished until you review and publish it in the Central Portal.
 # The version comes from the input, so a release commits no version change.
+#
+# The ruleset on v* tags lets only the project-izar App create them, so the tag and release use an
+# App token (repository variable PROJECT_IZAR_APP_ID, secret PROJECT_IZAR_APP_PRIVATE_KEY).
 
 on:
   workflow_dispatch:
@@ -25,7 +28,7 @@ jobs:
     name: Deploy to Maven Central and create the release
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     steps:
       - name: Check the version and branch
@@ -56,6 +59,24 @@ jobs:
             exit 1
           fi
 
+      - name: Create the project-izar App token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.PROJECT_IZAR_APP_ID }}
+          private-key: ${{ secrets.PROJECT_IZAR_APP_PRIVATE_KEY }}
+
+      # Tagging comes before the upload so a tag the ruleset refuses fails before anything
+      # reaches Central.
+      - name: Tag the commit
+        id: tag
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/v$VERSION" -f "sha=$GITHUB_SHA" > /dev/null
+
       - name: Set up Java and signing
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
@@ -76,11 +97,10 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: ./mvnw -B -Prelease "-Drevision=$VERSION" deploy
 
-      # The upload is the point of no return, so the tag and release come after it. A failed
-      # build leaves nothing behind to clean up.
-      - name: Tag the commit and create the GitHub release
+      - name: Create the GitHub release
+        id: release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ inputs.version }}
         shell: bash
         run: |
@@ -92,10 +112,19 @@ jobs:
           NOTES="$RUNNER_TEMP/notes.md"
           gh pr list --state merged --head "rc/$VERSION" --json body --jq '.[0].body // ""' > "$NOTES"
           if [[ -s "$NOTES" ]]; then
-            gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" \
+            gh release create "v$VERSION" --verify-tag --title "$VERSION" \
               --notes-file "$NOTES" "${FLAGS[@]}"
           else
             echo "No merged rc/$VERSION pull request found; generating notes from the commits."
-            gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" \
+            gh release create "v$VERSION" --verify-tag --title "$VERSION" \
               --generate-notes "${FLAGS[@]}"
           fi
+
+      # A failed run leaves its Central deployment unpublished, so removing the tag lets a rerun
+      # start clean. Drop the unpublished deployment in the Portal before rerunning.
+      - name: Remove the tag after a failure
+        if: failure() && steps.tag.outcome == 'success' && steps.release.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ inputs.version }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/v$VERSION"
