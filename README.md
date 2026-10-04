@@ -7,14 +7,16 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/glisseo-dev/project-izar/badge)](https://scorecard.dev/viewer/?uri=github.com/glisseo-dev/project-izar)
 [![Java 25](https://img.shields.io/badge/Java-25-orange)](#compatibility)
 
-Izar starts from the GraphQL operations you write. Each query, mutation, and
-subscription in a `.graphql` file becomes one immutable Java record, with
-builders for its variables and exactly the fields that operation selects. A
-Maven or Gradle plugin generates them at build time. You run the result through
-the `GraphQlClient` your Spring Boot application already configures,
-synchronously or reactively, so authentication, interceptors, and connection
-settings stay where they are. Generated classes depend only on the JDK and one
-small operation contract, which keeps them light.
+Izar is a type-safe Java GraphQL client and code generator for Spring Boot and
+Spring for GraphQL. It generates immutable Java records from the queries,
+mutations, and subscriptions in your .graphql files, with typed variables,
+input builders, and exactly the response fields each operation selects. Maven
+and Gradle plugins generate the code at build time.
+Generated operations run through the Spring GraphQlClient your application
+already configures, synchronously or reactively, so authentication,
+interceptors, timeouts, and connection settings remain in your existing Spring
+configuration. Generated classes depend only on the JDK and Izar's small
+operation contract, keeping the generated code lightweight.
 
 ## Features
 
