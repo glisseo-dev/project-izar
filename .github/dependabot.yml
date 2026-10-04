@@ -5,9 +5,12 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      # The Maven plugin targets the Maven 3.9 API that a 3.9 distribution bundles. Raising that
-      # baseline to 3.10 is a deliberate compatibility decision, not a routine bump. The build
-      # wrapper itself may move freely.
+      # The wrapper stays on Maven 3.9: under 3.10, central-publishing-maven-plugin builds a
+      # bundle that Central rejects with "Bundle has content that does NOT have a .pom file"
+      # (mavenplugins/central-publishing-maven-plugin#78). The Maven plugin also targets the 3.9
+      # API that a 3.9 distribution bundles. Moving to 3.10 is a deliberate decision.
+      - dependency-name: "org.apache.maven:apache-maven"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "org.apache.maven:maven-plugin-api"
         update-types: ["version-update:semver-minor", "version-update:semver-major"]
   - package-ecosystem: "gradle"
