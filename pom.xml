@@ -58,7 +58,7 @@
     <maven.version>3.9.16</maven.version>
     <spring-boot.version>4.1.1</spring-boot.version>
     <spring-shell.version>4.0.3</spring-shell.version>
-    <tomcat.version>11.0.26</tomcat.version>
+    <tomcat.version>11.0.27</tomcat.version>
     <jackson-bom.version>3.2.3</jackson-bom.version>
     <jackson-2-bom.version>2.22.3</jackson-2-bom.version>
 
